@@ -1,26 +1,175 @@
-# TradeSense
+# TradeSense 📈
 
-iOS app for training trading intuition using historical events and stock performance data.
+一款用于训练交易直觉的iOS应用，通过历史事件和股票表现数据帮助用户培养市场敏感度。
 
-## Features
-- Historical event presentation
-- 5-option prediction interface (大涨、小涨、不变、小跌、大跌)
-- Real historical performance comparison
-- Session tracking and statistics
+## 🎯 应用理念
+TradeSense旨在通过真实的历史事件案例，让用户在模拟环境中练习对股票价格走势的预测能力，从而培养交易直觉和风险管理意识。
 
-## Technology Stack
-- SwiftUI
-- Swift
-- Mock data (for MVP)
+## ✨ 核心功能
 
-## Development Setup
-1. Open `TradeSense.xcodeproj` in Xcode
-2. Select simulator device
-3. Build and run (⌘ + R)
+### 🎲 历史事件训练
+- **12个真实历史事件**：包含美联储政策、财报发布、行业新闻等
+- **多市场覆盖**：美股、港股、A股代表性公司
+- **详细事件信息**：事件描述、相关股票、发生日期、影响周期
 
-## Project Structure
-- `TradeSenseApp.swift`: Main app entry point
-- `ContentView.swift`: Main interface
-- `Models/`: Data models
-- `Data/`: Mock data sources
-- `Views/`: SwiftUI components
+### 🎯 5种预测选项
+- **大涨** (+2%以上) 📈
+- **小涨** (+1% 到 +2%) ↗️
+- **不变** (-1% 到 +1%) ➡️
+- **小跌** (-1% 到 -2%) ↘️
+- **大跌** (-2%以下) 📉
+
+### 📊 实时统计反馈
+- **准确率统计**：实时计算预测准确率
+- **连胜记录**：追踪当前连胜和最高连胜
+- **训练进度**：总尝试次数和正确预测次数
+
+### 🔄 完整学习循环
+1. 展示历史事件
+2. 用户做出预测
+3. 显示实际结果对比
+4. 统计信息更新
+5. 继续下一个事件
+
+## 🛠 技术栈
+
+- **SwiftUI** - 声明式UI框架
+- **Swift** - iOS原生开发语言
+- **MVVM架构** - 数据与UI分离
+- **@Published** - 响应式状态管理
+- **Mock数据** - 12个真实历史案例
+
+## 🚀 快速开始
+
+### 环境要求
+- macOS 13.0+
+- Xcode 15.0+
+- iOS 17.0+
+
+### 安装步骤
+1. 克隆项目
+   ```bash
+   git clone <repository-url>
+   cd TradeSense
+   ```
+
+2. 打开Xcode项目
+   ```bash
+   open TradeSense.xcodeproj
+   ```
+
+3. 选择模拟器设备（推荐iPhone 15 Pro）
+
+4. 编译运行
+   - 快捷键: `⌘ + R`
+   - 或点击Xcode工具栏的播放按钮
+
+### 真机测试
+1. 连接iPhone设备
+2. 在Xcode中选择您的设备
+3. 使用免费Apple ID签名
+4. 运行测试
+
+## 📁 项目结构
+
+```
+TradeSense/
+├── TradeSenseApp.swift          # 应用入口
+├── ContentView.swift            # 主界面
+├── Models/                      # 数据模型
+│   ├── HistoricalEvent.swift    # 历史事件模型
+│   ├── PredictionOption.swift   # 预测选项枚举
+│   ├── TradingSession.swift     # 交易会话管理
+│   └── MockData.swift           # 模拟数据源
+├── Views/                       # UI组件
+│   ├── EventCard.swift          # 事件展示卡片
+│   ├── PredictionButton.swift   # 预测按钮
+│   ├── ResultView.swift         # 结果展示视图
+│   └── StatsView.swift          # 统计信息面板
+├── Assets.xcassets/            # 资源文件
+└── Preview Content/            # 预览资源
+```
+
+## 🎮 使用指南
+
+### 基本操作
+1. **查看事件**：阅读显示的历史事件信息
+2. **做出预测**：点击5个预测按钮中的一个
+3. **查看结果**：系统会显示您的预测与实际结果的对比
+4. **继续练习**：点击"继续练习"进入下一个事件
+5. **重置统计**：点击导航栏"重置"按钮清空所有统计
+
+### 学习建议
+- 每天练习10-15个事件
+- 关注事件背后的逻辑而非单纯猜测
+- 分析错误预测的原因
+- 跟踪准确率变化趋势
+
+## 📊 数据来源
+
+应用包含12个真实历史事件案例：
+
+- **货币政策**：美联储降息、央行政策
+- **财报事件**：苹果、特斯拉、微软等财报
+- **行业新闻**：AI技术突破、元宇宙发展
+- **公司动态**：拆股、提价、业务调整
+- **市场情绪**：用户增长、收入预期
+
+## 🔧 开发计划
+
+### 当前版本 (v1.0)
+- ✅ 基础预测功能
+- ✅ Mock数据支持
+- ✅ 统计跟踪系统
+- ✅ SwiftUI界面
+
+### 未来功能
+- [ ] 真实数据API集成
+- [ ] 更多历史事件库
+- [ ] 难度分级系统
+- [ ] 成就系统
+- [ ] 社交分享功能
+- [ ] 数据导出功能
+
+## 🤝 贡献指南
+
+欢迎提交Issue和Pull Request！
+
+### 开发规范
+- 遵循Swift API设计指南
+- 使用SwiftLint进行代码规范检查
+- 编写单元测试覆盖核心逻辑
+- 提交前运行完整测试套件
+
+### 代码结构
+- Model: 纯数据结构，无业务逻辑
+- View: 无状态UI组件
+- ViewModel: 业务逻辑和状态管理
+
+## 📝 许可证
+
+本项目采用MIT许可证，详见LICENSE文件。
+
+## 🆘 常见问题
+
+### Q: 应用无法编译？
+A: 确保Xcode版本为15.0+，iOS部署目标为17.0+
+
+### Q: 模拟器运行崩溃？
+A: 清理构建文件夹（⌘ + Shift + K）后重新编译
+
+### Q: 如何添加新的事件数据？
+A: 在`MockData.swift`中的`historicalEvents`数组添加新项目
+
+### Q: 真机测试需要开发者账号吗？
+A: 不需要，使用免费Apple ID即可进行真机测试
+
+## 📞 支持
+
+如有问题或建议，请通过以下方式联系：
+- 提交GitHub Issue
+- 发送邮件至开发团队
+
+---
+
+**TradeSense** - 培养你的交易直觉，做出更明智的投资决策！
