@@ -1,0 +1,217 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 55;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		13B07FBC1A68108700A75B9A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.swift */; };
+		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		E3E69AFA28F34D1F00C92727 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E69AF928F34D1F00C92727 /* ContentView.swift */; };
+		E3E69AFC28F34D1F00C92727 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E3E69AFB28F34D1F00C92727 /* Assets.xcassets */; };
+		E3E69AFF28F34D1F00C92727 /* Preview Content in Resources */ = {isa = PBXBuildFile; fileRef = E3E69AFE28F34D1F00C92727 /* Preview Content */; };
+		E3E69B0128F34D1F00C92727 /* TradeSenseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E69B0028F34D1F00C92727 /* TradeSenseApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		13B07F961A68108700A75B9A /* TradeSense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TradeSense.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB01A68108700A75B9A /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		E3E69AF928F34D1F00C92727 /* ContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E3E69AFB28F34D1F00C92727 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E3E69AFE28F34D1F00C92727 /* Preview Content */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "Preview Content"; sourceTree = "<group>"; };
+		E3E69B0028F34D1F00C92727 /* TradeSenseApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TradeSenseApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		13B07F8C1A68108700A75B9A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		13B07F871A68108700A75B9A = {
+			isa = PBXGroup;
+			children = (
+				13B07F921A68108700A75B9A /* TradeSense */,
+				13B07F911A68108700A75B9A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		13B07F911A68108700A75B9A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				13B07F961A68108700A75B9A /* TradeSense.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		13B07F921A68108700A75B9A /* TradeSense */ = {
+			isa = PBXGroup;
+			children = (
+				13B07FB01A68108700A75B9A /* AppDelegate.swift */,
+				E3E69B0028F34D1F00C92727 /* TradeSenseApp.swift */,
+				E3E69AF928F34D1F00C92727 /* ContentView.swift */,
+				13B07FB51A68108700A75B9A /* Images.xcassets */,
+				E3E69AFB28F34D1F00C92727 /* Assets.xcassets */,
+				E3E69AFE28F34D1F00C92727 /* Preview Content */,
+				13B07FB61A68108700A75B9A /* Info.plist */,
+				13B07FB71A68108700A75B9A /* main.m */,
+			);
+			path = TradeSense;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		13B07F861A68108700A75B9A /* TradeSense */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 13B07F931A68108700A75B9A /* Build configuration list for PBXNativeTarget "TradeSense" */;
+			buildPhases = (
+				13B07F891A68108700A75B9A /* Sources */,
+				13B07F8C1A68108700A75B9A /* Frameworks */,
+				13B07F8E1A68108700A75B9A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TradeSense;
+			productName = TradeSense;
+			productReference = 13B07F961A68108700A75B9A /* TradeSense.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		13B07F861A68108700A75B9A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					13B07F861A68108700A75B9A = {
+						CreatedOnToolsVersion = 14.0;
+					};
+				};
+			};
+			buildConfigurationList = 13B07F871A68108700A75B9A /* Build configuration list for PBXProject "TradeSense" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 13B07F871A68108700A75B9A;
+			productRefGroup = 13B07F911A68108700A75B9A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				13B07F861A68108700A75B9A /* TradeSense */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		13B07F8E1A68108700A75B9A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				E3E69AFC28F34D1F00C92727 /* Assets.xcassets in Resources */,
+				E3E69AFF28F34D1F00C92727 /* Preview Content in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		13B07F891A68108700A75B9A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				13B07FBC1A68108700A75B9A /* AppDelegate.swift in Sources */,
+				13B07FC11A68108700A75B9A /* main.m in Sources */,
+				E3E69AFA28F34D1F00C92727 /* ContentView.swift in Sources */,
+				E3E69B0128F34D1F00C92727 /* TradeSenseApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		13B07F941A68108700A75B9A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = TradeSense/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.TradeSense";
+				PRODUCT_NAME = TradeSense;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		13B07F951A68108700A75B9A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = TradeSense/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yourcompany.TradeSense";
+				PRODUCT_NAME = TradeSense;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		13B07F931A68108700A75B9A /* Build configuration list for PBXNativeTarget "TradeSense" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				13B07F941A68108700A75B9A /* Debug */,
+				13B07F951A68108700A75B9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		13B07F871A68108700A75B9A /* Build configuration list for PBXProject "TradeSense" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				13B07F941A68108700A75B9A /* Debug */,
+				13B07F951A68108700A75B9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 13B07F861A68108700A75B9A /* Project object */;
+}
