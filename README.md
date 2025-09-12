@@ -50,12 +50,12 @@ TradeSense旨在通过真实的历史事件案例，让用户在模拟环境中�
 1. 克隆项目
    ```bash
    git clone <repository-url>
-   cd TradeSense
+   cd trade_sense
    ```
 
 2. 打开Xcode项目
    ```bash
-   open TradeSense.xcodeproj
+   open TradeSense/TradeSense.xcodeproj
    ```
 
 3. 选择模拟器设备（推荐iPhone 15 Pro）
