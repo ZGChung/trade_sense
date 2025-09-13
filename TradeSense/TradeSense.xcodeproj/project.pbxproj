@@ -23,6 +23,7 @@
 		E3A1B0212A0F128500000014 /* DeepSeekService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B0202A0F128500000014 /* DeepSeekService.swift */; };
 		E3A1B0222A0F129500000015 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B0212A0F129500000015 /* APIConfig.swift */; };
 		E3A1B0232A0F130500000016 /* config.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = E3A1B0222A0F130500000016 /* config.example.plist */; };
+		E3A1B0242A0F131500000017 /* config.plist in Resources */ = {isa = PBXBuildFile; fileRef = E3A1B0232A0F131500000017 /* config.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		E3A1B0202A0F128500000014 /* DeepSeekService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepSeekService.swift; sourceTree = "<group>"; };
 		E3A1B0212A0F129500000015 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		E3A1B0222A0F130500000016 /* config.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.example.plist; sourceTree = "<group>"; };
+		E3A1B0232A0F131500000017 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
 		E3A1B01F2A0F126500000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -132,6 +134,7 @@
 			children = (
 				E3A1B0212A0F129500000015 /* APIConfig.swift */,
 				E3A1B0222A0F130500000016 /* config.example.plist */,
+				E3A1B0232A0F131500000017 /* config.plist */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -197,6 +200,7 @@
 				E3A1B0082A0F123400000004 /* Preview Assets.xcassets in Resources */,
 				E3A1B0052A0F123400000003 /* Assets.xcassets in Resources */,
 				E3A1B0232A0F130500000016 /* config.example.plist in Resources */,
+				E3A1B0242A0F131500000017 /* config.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
