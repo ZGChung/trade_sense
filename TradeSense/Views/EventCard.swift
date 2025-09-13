@@ -22,16 +22,16 @@ struct EventCard: View {
                     .cornerRadius(8)
             }
             
-            // 所有事件列表
-            VStack(spacing: 12) {
-                ForEach(Array(eventGroup.events.enumerated()), id: \.offset) { index, event in
-                    EventRow(
-                        event: event,
-                        isCurrentEvent: index == currentIndex,
-                        eventNumber: index + 1
-                    )
-                }
-            }
+                    // 所有事件列表
+                    VStack(spacing: 12) {
+                        ForEach(Array(eventGroup.events.enumerated()), id: \.offset) { index, event in
+                            EventRow(
+                                event: event,
+                                isCurrentEvent: false, // 不再高亮任何事件
+                                eventNumber: index + 1
+                            )
+                        }
+                    }
         }
         .padding()
         .background(Color(.systemBackground))
@@ -53,31 +53,22 @@ struct EventRow: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .frame(width: 24, height: 24)
-                .background(isCurrentEvent ? Color.blue : Color.gray)
+                .background(Color.blue)
                 .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(event.description)
-                    .font(isCurrentEvent ? .body : .caption)
-                    .fontWeight(isCurrentEvent ? .semibold : .regular)
-                    .foregroundColor(isCurrentEvent ? .primary : .secondary)
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 
-                HStack {
-                    Text("日期: \(event.date)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("事件后\(event.daysAfterEvent)天")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text("日期: \(event.date)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 4)
-        .opacity(isCurrentEvent ? 1.0 : 0.6)
     }
 }
 

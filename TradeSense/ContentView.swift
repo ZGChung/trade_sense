@@ -2,8 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var session = TradingSession()
-    @State private var showStats = false
-    @State private var dragOffset: CGFloat = 0
+    @State private var showStats = true
     
     var body: some View {
         NavigationView {
@@ -25,10 +24,20 @@ struct ContentView: View {
                             .padding(.top, showStats ? 120 : 20)
                             
                             // 事件卡片
-                            EventCard(eventGroup: session.currentEventGroup, currentIndex: session.currentEventIndex)
+                            EventCard(eventGroup: session.currentEventGroup, currentIndex: 0)
                                 .padding(.horizontal)
                             
                             if !session.showResult {
+                                // 判断日期说明
+                                let finalEvent = session.currentEventGroup.events.last!
+                                Text("请预测 \(session.currentEventGroup.stockName) 在 \(finalEvent.date) 后\(finalEvent.daysAfterEvent)天的涨跌情况")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 16)
+                                
                                 // 预测按钮 - 居中垂直排列
                                 VStack(spacing: 16) {
                                     ForEach(PredictionOption.allCases, id: \.self) { option in
@@ -43,7 +52,7 @@ struct ContentView: View {
                             } else if let userPrediction = session.userPrediction {
                                 // 结果展示
                                 ResultView(
-                                    event: session.currentEvent,
+                                    event: session.currentEventGroup.events.last!,
                                     userPrediction: userPrediction,
                                     onContinue: session.nextEvent
                                 )
@@ -79,34 +88,10 @@ struct ContentView: View {
                         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
                         .offset(y: showStats ? 0 : -100)
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showStats)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    dragOffset = value.translation.height
-                                }
-                                .onEnded { value in
-                                    if value.translation.height > 20 {
-                                        showStats = false
-                                    } else if value.translation.height < -20 {
-                                        showStats = true
-                                    }
-                                    dragOffset = 0
-                                }
-                        )
                         
                         Spacer()
                     }
                 }
-                .gesture(
-                    DragGesture()
-                        .onEnded { value in
-                            if value.translation.height < -50 && !showStats {
-                                showStats = true
-                            } else if value.translation.height > 50 && showStats {
-                                showStats = false
-                            }
-                        }
-                )
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

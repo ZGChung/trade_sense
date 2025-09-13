@@ -41,7 +41,9 @@ class TradingSession: ObservableObject {
         userPrediction = prediction
         totalAttempts += 1
         
-        let isCorrect = prediction == currentEvent.performanceCategory
+        // 使用最后一个事件的结果作为整个事件组的最终结果
+        let finalEvent = currentEventGroup.events.last!
+        let isCorrect = prediction == finalEvent.performanceCategory
         if isCorrect {
             correctPredictions += 1
             currentStreak += 1
@@ -54,14 +56,9 @@ class TradingSession: ObservableObject {
     }
     
     func nextEvent() {
-        if hasMoreEventsInGroup {
-            // 移动到同一组的下一个事件
-            currentEventIndex += 1
-        } else {
-            // 获取新的事件组
-            currentEventGroup = mockData.getRandomEventGroup()
-            currentEventIndex = 0
-        }
+        // 每次都获取新的事件组，因为用户对整个组进行一次判断
+        currentEventGroup = mockData.getRandomEventGroup()
+        currentEventIndex = 0
         userPrediction = nil
         showResult = false
     }
