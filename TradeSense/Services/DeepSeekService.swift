@@ -26,8 +26,8 @@ struct DeepSeekChoice: Codable {
 class DeepSeekService: ObservableObject {
     static let shared = DeepSeekService()
     
-    // 🔑 在这里填入你的DeepSeek API Key
-    private let apiKey = "YOUR_DEEPSEEK_API_KEY_HERE"
+    // 🔑 从安全配置文件读取 API Key
+    private let apiKey = APIConfig.shared.deepSeekAPIKey
     
     private let apiURL = "https://api.deepseek.com/chat/completions"
     private let model = "deepseek-chat"
@@ -43,7 +43,7 @@ class DeepSeekService: ObservableObject {
     ) async throws -> String {
         
         // 检查API Key是否已配置
-        guard apiKey != "YOUR_DEEPSEEK_API_KEY_HERE" else {
+        guard apiKey != "YOUR_DEEPSEEK_API_KEY_HERE" && !apiKey.isEmpty else {
             throw DeepSeekError.missingAPIKey
         }
         
@@ -142,7 +142,7 @@ enum DeepSeekError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "请在DeepSeekService.swift中配置你的API Key"
+            return "请按照 Config/config.example.plist 模板创建配置文件"
         case .invalidURL:
             return "无效的API URL"
         case .encodingError(let error):

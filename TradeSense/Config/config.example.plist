@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>DeepSeekAPIKey</key>
+	<string>YOUR_DEEPSEEK_API_KEY_HERE</string>
+	<key>Description</key>
+	<string>配置文件模板 - 请复制为 config.plist 并填入真实的 API Key</string>
+	<key>Instructions</key>
+	<array>
+		<string>1. 复制此文件为 config.plist</string>
+		<string>2. 将 YOUR_DEEPSEEK_API_KEY_HERE 替换为真实的 DeepSeek API Key</string>
+		<string>3. config.plist 已在 .gitignore 中，不会被提交到仓库</string>
+	</array>
+</dict>
+</plist>

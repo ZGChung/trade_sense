@@ -21,6 +21,8 @@
 		E3A1B01E2A0F125500000012 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B01D2A0F125500000012 /* StatsView.swift */; };
 		E3A1B0202A0F127500000013 /* EventGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B01F2A0F127500000013 /* EventGroup.swift */; };
 		E3A1B0212A0F128500000014 /* DeepSeekService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B0202A0F128500000014 /* DeepSeekService.swift */; };
+		E3A1B0222A0F129500000015 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B0212A0F129500000015 /* APIConfig.swift */; };
+		E3A1B0232A0F130500000016 /* config.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = E3A1B0222A0F130500000016 /* config.example.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,8 @@
 		E3A1B01D2A0F125500000012 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		E3A1B01F2A0F127500000013 /* EventGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventGroup.swift; sourceTree = "<group>"; };
 		E3A1B0202A0F128500000014 /* DeepSeekService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepSeekService.swift; sourceTree = "<group>"; };
+		E3A1B0212A0F129500000015 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
+		E3A1B0222A0F130500000016 /* config.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.example.plist; sourceTree = "<group>"; };
 		E3A1B01F2A0F126500000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -75,6 +79,7 @@
 				E3A1B00E2A0F124000000019 /* Models */,
 				E3A1B01F2A0F125A00000020 /* Views */,
 				E3A1B0212A0F129500000022 /* Services */,
+				E3A1B0232A0F131500000023 /* Config */,
 				E3A1B0002A0F123400000001 /* TradeSenseApp.swift */,
 				E3A1B0022A0F123400000002 /* ContentView.swift */,
 				E3A1B0042A0F123400000003 /* Assets.xcassets */,
@@ -120,6 +125,15 @@
 				E3A1B0202A0F128500000014 /* DeepSeekService.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		E3A1B0232A0F131500000023 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				E3A1B0212A0F129500000015 /* APIConfig.swift */,
+				E3A1B0222A0F130500000016 /* config.example.plist */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -182,6 +196,7 @@
 			files = (
 				E3A1B0082A0F123400000004 /* Preview Assets.xcassets in Resources */,
 				E3A1B0052A0F123400000003 /* Assets.xcassets in Resources */,
+				E3A1B0232A0F130500000016 /* config.example.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +218,7 @@
 				E3A1B01E2A0F125500000012 /* StatsView.swift in Sources */,
 				E3A1B0202A0F127500000013 /* EventGroup.swift in Sources */,
 				E3A1B0212A0F128500000014 /* DeepSeekService.swift in Sources */,
+				E3A1B0222A0F129500000015 /* APIConfig.swift in Sources */,
 				E3A1B0012A0F123400000001 /* TradeSenseApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -46,3 +46,11 @@ TradeSense.xcworkspace/
 # SwiftPM
 .Package.swift.swp
 .swiftpm/
+
+# API Configuration (Security)
+TradeSense/Config/config.plist
+config.plist
+
+# Sensitive files
+*.key
+*.secret
