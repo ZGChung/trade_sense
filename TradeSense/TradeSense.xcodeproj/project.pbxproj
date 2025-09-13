@@ -19,6 +19,7 @@
 		E3A1B01A2A0F125500000010 /* PredictionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B0192A0F125500000010 /* PredictionButton.swift */; };
 		E3A1B01C2A0F125500000011 /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B01B2A0F125500000011 /* ResultView.swift */; };
 		E3A1B01E2A0F125500000012 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B01D2A0F125500000012 /* StatsView.swift */; };
+		E3A1B0202A0F127500000013 /* EventGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A1B01F2A0F127500000013 /* EventGroup.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		E3A1B0192A0F125500000010 /* PredictionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictionButton.swift; sourceTree = "<group>"; };
 		E3A1B01B2A0F125500000011 /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
 		E3A1B01D2A0F125500000012 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		E3A1B01F2A0F127500000013 /* EventGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventGroup.swift; sourceTree = "<group>"; };
 		E3A1B01F2A0F126500000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -93,6 +95,7 @@
 				E3A1B0112A0F124500000006 /* MockData.swift */,
 				E3A1B0132A0F124500000007 /* PredictionOption.swift */,
 				E3A1B0152A0F124500000008 /* TradingSession.swift */,
+				E3A1B01F2A0F127500000013 /* EventGroup.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -187,6 +190,7 @@
 				E3A1B01A2A0F125500000010 /* PredictionButton.swift in Sources */,
 				E3A1B01C2A0F125500000011 /* ResultView.swift in Sources */,
 				E3A1B01E2A0F125500000012 /* StatsView.swift in Sources */,
+				E3A1B0202A0F127500000013 /* EventGroup.swift in Sources */,
 				E3A1B0012A0F123400000001 /* TradeSenseApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

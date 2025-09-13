@@ -19,14 +19,18 @@ struct PredictionButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            HStack(spacing: 16) {
                 Text(option.emoji)
-                    .font(.title2)
+                    .font(.title)
+                
                 Text(option.rawValue)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                
+                Spacer()
             }
-            .frame(maxWidth: .infinity, minHeight: 80)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .padding(.horizontal, 20)
             .background(backgroundColor)
             .cornerRadius(12)
             .overlay(

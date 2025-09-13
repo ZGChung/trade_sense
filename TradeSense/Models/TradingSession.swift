@@ -1,7 +1,8 @@
 import Foundation
 
 class TradingSession: ObservableObject {
-    @Published var currentEvent: HistoricalEvent
+    @Published var currentEventGroup: EventGroup
+    @Published var currentEventIndex: Int = 0
     @Published var userPrediction: PredictionOption?
     @Published var showResult: Bool = false
     @Published var totalAttempts: Int = 0
@@ -12,7 +13,19 @@ class TradingSession: ObservableObject {
     private let mockData = MockData.shared
     
     init() {
-        self.currentEvent = mockData.getRandomEvent()
+        self.currentEventGroup = mockData.getRandomEventGroup()
+    }
+    
+    var currentEvent: HistoricalEvent {
+        return currentEventGroup.events[currentEventIndex]
+    }
+    
+    var allEventsInGroup: [HistoricalEvent] {
+        return currentEventGroup.events
+    }
+    
+    var hasMoreEventsInGroup: Bool {
+        return currentEventIndex < currentEventGroup.events.count - 1
     }
     
     var accuracy: Double {
@@ -41,7 +54,14 @@ class TradingSession: ObservableObject {
     }
     
     func nextEvent() {
-        currentEvent = mockData.getRandomEvent()
+        if hasMoreEventsInGroup {
+            // 移动到同一组的下一个事件
+            currentEventIndex += 1
+        } else {
+            // 获取新的事件组
+            currentEventGroup = mockData.getRandomEventGroup()
+            currentEventIndex = 0
+        }
         userPrediction = nil
         showResult = false
     }
@@ -51,6 +71,9 @@ class TradingSession: ObservableObject {
         correctPredictions = 0
         currentStreak = 0
         maxStreak = 0
-        nextEvent()
+        currentEventGroup = mockData.getRandomEventGroup()
+        currentEventIndex = 0
+        userPrediction = nil
+        showResult = false
     }
 }
