@@ -46,7 +46,7 @@ struct EventRow: View {
     let eventNumber: Int
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 16) {
             // 事件编号
             Text("\(eventNumber)")
                 .font(.caption)

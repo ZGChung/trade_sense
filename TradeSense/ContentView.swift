@@ -86,7 +86,7 @@ struct ContentView: View {
                         .background(Color(.systemBackground))
                         .cornerRadius(16, corners: [.bottomLeft, .bottomRight])
                         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-                        .offset(y: showStats ? 0 : -100)
+                        .offset(y: showStats ? 0 : -200)
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showStats)
                         
                         Spacer()

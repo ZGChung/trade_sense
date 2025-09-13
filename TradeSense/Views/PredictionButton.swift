@@ -20,6 +20,8 @@ struct PredictionButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
+                Spacer()
+                
                 Text(option.emoji)
                     .font(.title)
                 
