@@ -2,6 +2,8 @@
 
 An iOS app designed to train trading intuition through historical events and stock performance data, helping users develop market sensitivity.
 
+<img width="671" height="487" alt="Screenshot 2025-09-13 at 4 38 52 PM" src="https://github.com/user-attachments/assets/3a21581c-b3f7-4385-a568-1c9d6173d991" />
+
 ## 🎯 App Philosophy
 
 TradeSense aims to help users practice predicting stock price movements in a simulated environment through real historical event cases, thereby cultivating trading intuition and risk management awareness.
