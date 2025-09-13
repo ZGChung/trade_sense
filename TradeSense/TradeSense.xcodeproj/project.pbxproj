@@ -76,7 +76,6 @@
 				E3A1B01F2A0F126500000014 /* Info.plist */,
 				E3A1B0062A0F123400000021 /* Preview Content */,
 			);
-			path = TradeSense;
 			sourceTree = "<group>";
 		};
 		E3A1B0062A0F123400000021 /* Preview Content */ = {
