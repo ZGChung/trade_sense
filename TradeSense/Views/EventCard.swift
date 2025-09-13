@@ -14,24 +14,17 @@ struct EventCard: View {
                 
                 Spacer()
                 
-                Text("第 \(currentIndex + 1) / \(eventGroup.events.count) 个事件")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(6)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
             }
-            
-                    // 所有事件列表
-                    VStack(spacing: 12) {
-                        ForEach(Array(eventGroup.events.enumerated()), id: \.offset) { index, event in
-                            EventRow(
-                                event: event,
-                                isCurrentEvent: false, // 不再高亮任何事件
-                                eventNumber: index + 1
-                            )
-                        }
+                // 所有事件列表
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(eventGroup.events.enumerated()), id: \.offset) { index, event in
+                        EventRow(
+                            event: event,
+                            isCurrentEvent: false, // 不再高亮任何事件
+                            eventNumber: index + 1
+                        )
                     }
+                }
         }
         .padding()
         .background(Color(.systemBackground))

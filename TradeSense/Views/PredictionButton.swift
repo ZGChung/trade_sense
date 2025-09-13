@@ -8,9 +8,9 @@ struct PredictionButton: View {
     var backgroundColor: Color {
         if isSelected {
             switch option {
-            case .bigRise, .smallRise: return .green.opacity(0.3)
-            case .unchanged: return .gray.opacity(0.3)
-            case .smallFall, .bigFall: return .red.opacity(0.3)
+            case .rise: return .green.opacity(0.3)
+            case .flat: return .gray.opacity(0.3)
+            case .fall: return .red.opacity(0.3)
             }
         }
         return Color(.systemGray6)
@@ -35,11 +35,11 @@ struct PredictionButton: View {
             .padding(.horizontal, 20)
             .background(backgroundColor)
             .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? (option == .bigRise || option == .smallRise ? Color.green : 
-                          option == .unchanged ? Color.gray : Color.red) : Color.clear, lineWidth: 2)
-            )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? (option == .rise ? Color.green :
+                              option == .flat ? Color.gray : Color.red) : Color.clear, lineWidth: 2)
+                )
         }
     }
 }
@@ -47,9 +47,9 @@ struct PredictionButton: View {
 struct PredictionButton_Previews: PreviewProvider {
     static var previews: some View {
         VStack {
-            PredictionButton(option: .bigRise, isSelected: true, action: {})
-            PredictionButton(option: .smallRise, isSelected: false, action: {})
-            PredictionButton(option: .unchanged, isSelected: false, action: {})
+            PredictionButton(option: .rise, isSelected: true, action: {})
+            PredictionButton(option: .flat, isSelected: false, action: {})
+            PredictionButton(option: .fall, isSelected: false, action: {})
         }
         .padding()
     }

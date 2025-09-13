@@ -21,6 +21,6 @@ struct HistoricalEvent: Identifiable {
                 return option
             }
         }
-        return .unchanged
+        return .flat
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var session = TradingSession()
-    @State private var showStats = true
+    @State private var showStats = false
     
     var body: some View {
         NavigationView {
@@ -36,7 +36,7 @@ struct ContentView: View {
                                     .foregroundColor(.primary)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
+                                    .padding(.vertical,16)
                                 
                                 // 预测按钮 - 居中垂直排列
                                 VStack(spacing: 16) {
@@ -52,6 +52,7 @@ struct ContentView: View {
                             } else if let userPrediction = session.userPrediction {
                                 // 结果展示
                                 ResultView(
+                                    eventGroup: session.currentEventGroup,
                                     event: session.currentEventGroup.events.last!,
                                     userPrediction: userPrediction,
                                     onContinue: session.nextEvent
@@ -67,18 +68,13 @@ struct ContentView: View {
                     VStack {
                         // 统计面板
                         VStack(spacing: 16) {
-                            // 拖拽指示器
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.gray)
-                                .frame(width: 40, height: 4)
-                                .padding(.top, 8)
-                            
                             StatsView(
                                 totalAttempts: session.totalAttempts,
                                 correctPredictions: session.correctPredictions,
                                 currentStreak: session.currentStreak,
                                 maxStreak: session.maxStreak
                             )
+                            .padding(.top, 16)
                             .padding(.horizontal)
                             .padding(.bottom, 16)
                         }
@@ -86,7 +82,7 @@ struct ContentView: View {
                         .background(Color(.systemBackground))
                         .cornerRadius(16, corners: [.bottomLeft, .bottomRight])
                         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-                        .offset(y: showStats ? 0 : -200)
+                        .offset(y: showStats ? 0 : -400)
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showStats)
                         
                         Spacer()
