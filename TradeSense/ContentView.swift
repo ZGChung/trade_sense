@@ -82,12 +82,12 @@ struct ContentView: View {
                         .gesture(
                             DragGesture()
                                 .onChanged { value in
-                                    dragOffset = value.translation.y
+                                    dragOffset = value.translation.height
                                 }
                                 .onEnded { value in
-                                    if value.translation.y > 20 {
+                                    if value.translation.height > 20 {
                                         showStats = false
-                                    } else if value.translation.y < -20 {
+                                    } else if value.translation.height < -20 {
                                         showStats = true
                                     }
                                     dragOffset = 0
@@ -100,9 +100,9 @@ struct ContentView: View {
                 .gesture(
                     DragGesture()
                         .onEnded { value in
-                            if value.translation.y < -50 && !showStats {
+                            if value.translation.height < -50 && !showStats {
                                 showStats = true
-                            } else if value.translation.y > 50 && showStats {
+                            } else if value.translation.height > 50 && showStats {
                                 showStats = false
                             }
                         }

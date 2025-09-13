@@ -83,7 +83,7 @@ struct EventRow: View {
 
 struct EventCard_Previews: PreviewProvider {
     static var previews: some View {
-        EventCard(event: MockData.shared.historicalEvents[0])
+        EventCard(eventGroup: MockData.shared.eventGroups[0], currentIndex: 0)
             .padding()
     }
 }
