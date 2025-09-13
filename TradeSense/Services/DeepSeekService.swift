@@ -54,7 +54,7 @@ class DeepSeekService: ObservableObject {
         
         // 构建提示词
         let prompt = """
-        作为一位资深的股票分析师，请分析以下情况：
+        作为一位资深的股票分析师，请直接对用户分析以下情况：
         
         股票：\(stockName)
         
@@ -63,14 +63,14 @@ class DeepSeekService: ObservableObject {
         
         实际表现：\(String(format: "%.2f%%", actualPerformance * 100))
         正确答案：\(correctAnswer.rawValue)
-        用户预测：\(userPrediction.rawValue)
+        你的预测：\(userPrediction.rawValue)
         
-        请简洁地解释为什么股票会有这样的表现，重点分析：
-        1. 这些事件对股价的影响机制
-        2. 市场反应的逻辑
-        3. 如果用户预测错误，简要说明可能的原因
+        请用第二人称直接对用户说话，简洁地解释为什么股票会有这样的表现：
+        1. 分析这些事件对股价的影响机制
+        2. 解释市场反应的逻辑
+        3. 如果预测错误，直接告诉用户可能的原因（用"你"而不是"用户"）
         
-        请用中文回答，控制在150字以内。
+        请用中文回答，语气亲切直接，控制在150字以内。以"你"开头与用户对话。
         """
         
         let request = DeepSeekRequest(
