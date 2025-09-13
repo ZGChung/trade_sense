@@ -1,194 +1,208 @@
 # TradeSense 📈
 
-一款用于训练交易直觉的 iOS 应用，通过历史事件和股票表现数据帮助用户培养市场敏感度。
+An iOS app designed to train trading intuition through historical events and stock performance data, helping users develop market sensitivity.
 
-## 🎯 应用理念
+## 🎯 App Philosophy
 
-TradeSense 旨在通过真实的历史事件案例，让用户在模拟环境中练习对股票价格走势的预测能力，从而培养交易直觉和风险管理意识。
+TradeSense aims to help users practice predicting stock price movements in a simulated environment through real historical event cases, thereby cultivating trading intuition and risk management awareness.
 
-## ✨ 核心功能
+## ✨ Core Features
 
-### 🎲 历史事件训练
+### 🎲 Historical Event Training
 
--   **12 个真实历史事件**：包含美联储政策、财报发布、行业新闻等
--   **多市场覆盖**：美股、港股、A 股代表性公司
--   **详细事件信息**：事件描述、相关股票、发生日期、影响周期
+-   **12 Real Historical Events**: Including Fed policies, earnings releases, industry news, etc.
+-   **Multi-Market Coverage**: Representative companies from US, Hong Kong, and A-share markets
+-   **Detailed Event Information**: Event descriptions, related stocks, dates, and impact cycles
 
-### 🎯 5 种预测选项
+### 🎯 3 Prediction Options
 
--   **涨** (+1%以上)📈
--   **平** (-1% 到 +1%)🟰
--   **跌** (-1%一下)📉
+-   **Rise** (above +1%) 📈
+-   **Flat** (-1% to +1%) 🟰
+-   **Fall** (below -1%) 📉
 
-### 📊 实时统计反馈
+### 📊 Real-time Statistical Feedback
 
--   **准确率统计**：实时计算预测准确率
--   **连胜记录**：追踪当前连胜和最高连胜
--   **训练进度**：总尝试次数和正确预测次数
+-   **Accuracy Statistics**: Real-time calculation of prediction accuracy
+-   **Streak Records**: Track current streak and highest streak
+-   **Training Progress**: Total attempts and correct predictions
 
-### 🔄 完整学习循环
+### 🔄 Complete Learning Loop
 
-1. 展示历史事件
-2. 用户做出预测
-3. 显示实际结果对比
-4. 统计信息更新
-5. 继续下一个事件
+1. Display historical events
+2. User makes predictions
+3. Show actual results comparison
+4. Update statistical information
+5. Continue to next event
 
-## 🛠 技术栈
+## 🛠 Tech Stack
 
--   **SwiftUI** - 声明式 UI 框架
--   **Swift** - iOS 原生开发语言
--   **MVVM 架构** - 数据与 UI 分离
--   **@Published** - 响应式状态管理
--   **Mock 数据** - 12 个真实历史案例
+-   **SwiftUI** - Declarative UI framework
+-   **Swift** - iOS native development language
+-   **MVVM Architecture** - Separation of data and UI
+-   **@Published** - Reactive state management
+-   **DeepSeek API** - AI-powered explanations
+-   **Mock Data** - 12 real historical cases
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
+### Requirements
 
 -   macOS 13.0+
 -   Xcode 15.0+
 -   iOS 17.0+
 
-### 安装步骤
+### Installation Steps
 
-1. 克隆项目
+1. Clone the project
 
     ```bash
     git clone <repository-url>
     cd trade_sense
     ```
 
-2. 打开 Xcode 项目
+2. Open Xcode project
 
     ```bash
     open TradeSense/TradeSense.xcodeproj
     ```
 
-3. 选择模拟器设备（推荐 iPhone 15 Pro）
+3. Select simulator device (iPhone 15 Pro recommended)
 
-4. 编译运行
-    - 快捷键: `⌘ + R`
-    - 或点击 Xcode 工具栏的播放按钮
+4. Build and run
+    - Shortcut: `⌘ + R`
+    - Or click the play button in Xcode toolbar
 
-### 真机测试
+### Device Testing
 
-1. 连接 iPhone 设备
-2. 在 Xcode 中选择您的设备
-3. 使用免费 Apple ID 签名
-4. 运行测试
+1. Connect iPhone device
+2. Select your device in Xcode
+3. Sign with free Apple ID
+4. Run test
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 TradeSense/
-├── TradeSenseApp.swift          # 应用入口
-├── ContentView.swift            # 主界面
-├── Models/                      # 数据模型
-│   ├── HistoricalEvent.swift    # 历史事件模型
-│   ├── PredictionOption.swift   # 预测选项枚举
-│   ├── TradingSession.swift     # 交易会话管理
-│   └── MockData.swift           # 模拟数据源
-├── Views/                       # UI组件
-│   ├── EventCard.swift          # 事件展示卡片
-│   ├── PredictionButton.swift   # 预测按钮
-│   ├── ResultView.swift         # 结果展示视图
-│   └── StatsView.swift          # 统计信息面板
-├── Assets.xcassets/            # 资源文件
-└── Preview Content/            # 预览资源
+├── TradeSenseApp.swift          # App entry point
+├── ContentView.swift            # Main interface
+├── Models/                      # Data models
+│   ├── HistoricalEvent.swift    # Historical event model
+│   ├── PredictionOption.swift   # Prediction option enum
+│   ├── EventGroup.swift         # Event group model
+│   ├── TradingSession.swift     # Trading session management
+│   └── MockData.swift           # Mock data source
+├── Views/                       # UI components
+│   ├── EventCard.swift          # Event display card
+│   ├── PredictionButton.swift   # Prediction button
+│   ├── ResultView.swift         # Result display view
+│   └── StatsView.swift          # Statistics panel
+├── Services/                    # External services
+│   └── DeepSeekService.swift    # AI explanation service
+├── Config/                      # Configuration
+│   ├── APIConfig.swift          # API configuration
+│   └── config.example.plist     # Config template
+├── Assets.xcassets/            # Asset files
+└── Preview Content/            # Preview assets
 ```
 
-## 🎮 使用指南
+## 🎮 Usage Guide
 
-### 基本操作
+### Basic Operations
 
-1. **查看事件**：阅读显示的历史事件信息
-2. **做出预测**：点击 5 个预测按钮中的一个
-3. **查看结果**：系统会显示您的预测与实际结果的对比
-4. **继续练习**：点击"继续练习"进入下一个事件
-5. **重置统计**：点击导航栏"重置"按钮清空所有统计
+1. **View Events**: Read the displayed historical event information
+2. **Make Predictions**: Click one of the 3 prediction buttons
+3. **View Results**: System shows comparison between your prediction and actual results
+4. **Continue Practice**: Click "Continue Practice" to proceed to next event
+5. **Reset Statistics**: Click "Reset" button in navigation bar to clear all statistics
 
-### 学习建议
+### Learning Tips
 
--   每天练习 10-15 个事件
--   关注事件背后的逻辑而非单纯猜测
--   分析错误预测的原因
--   跟踪准确率变化趋势
+-   Practice 10-15 events daily
+-   Focus on logic behind events rather than pure guessing
+-   Analyze reasons for incorrect predictions
+-   Track accuracy trend changes
 
-## 📊 数据来源
+## 📊 Data Sources
 
-应用包含 12 个真实历史事件案例：
+The app contains 12 real historical event cases:
 
--   **货币政策**：美联储降息、央行政策
--   **财报事件**：苹果、特斯拉、微软等财报
--   **行业新闻**：AI 技术突破、元宇宙发展
--   **公司动态**：拆股、提价、业务调整
--   **市场情绪**：用户增长、收入预期
+-   **Monetary Policy**: Fed rate cuts, central bank policies
+-   **Earnings Events**: Apple, Tesla, Microsoft earnings reports
+-   **Industry News**: AI technology breakthroughs, metaverse developments
+-   **Company Dynamics**: Stock splits, price increases, business adjustments
+-   **Market Sentiment**: User growth, revenue expectations
 
-## 🔧 开发计划
+## 🔧 Development Roadmap
 
-### 当前版本 (v1.0)
+### Current Version (v1.0)
 
--   ✅ 基础预测功能
--   ✅ Mock 数据支持
--   ✅ 统计跟踪系统
--   ✅ SwiftUI 界面
+-   ✅ Basic prediction functionality
+-   ✅ Mock data support
+-   ✅ Statistics tracking system
+-   ✅ SwiftUI interface
+-   ✅ AI-powered explanations
+-   ✅ Event grouping system
+-   ✅ Collapsible statistics panel
 
-### 未来功能
+### Future Features
 
--   [ ] 真实数据 API 集成
--   [ ] 更多历史事件库
--   [ ] 难度分级系统
--   [ ] 成就系统
--   [ ] 社交分享功能
--   [ ] 数据导出功能
+-   [ ] Real data API integration
+-   [ ] Expanded historical event library
+-   [ ] Difficulty grading system
+-   [ ] Achievement system
+-   [ ] Social sharing features
+-   [ ] Data export functionality
 
-## 🤝 贡献指南
+## 🤝 Contributing
 
-欢迎提交 Issue 和 Pull Request！
+Issues and Pull Requests are welcome!
 
-### 开发规范
+### Development Guidelines
 
--   遵循 Swift API 设计指南
--   使用 SwiftLint 进行代码规范检查
--   编写单元测试覆盖核心逻辑
--   提交前运行完整测试套件
+-   Follow Swift API Design Guidelines
+-   Use SwiftLint for code style checking
+-   Write unit tests covering core logic
+-   Run complete test suite before submitting
 
-### 代码结构
+### Code Structure
 
--   Model: 纯数据结构，无业务逻辑
--   View: 无状态 UI 组件
--   ViewModel: 业务逻辑和状态管理
+-   Model: Pure data structures, no business logic
+-   View: Stateless UI components
+-   ViewModel: Business logic and state management
 
-## 📝 许可证
+## 📝 License
 
-本项目采用 MIT 许可证，详见 LICENSE 文件。
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🆘 常见问题
+## 🆘 FAQ
 
-### Q: 应用无法编译？
+### Q: App won't compile?
 
-A: 确保 Xcode 版本为 15.0+，iOS 部署目标为 17.0+
+A: Ensure Xcode version is 15.0+, iOS deployment target is 17.0+
 
-### Q: 模拟器运行崩溃？
+### Q: Simulator crashes?
 
-A: 清理构建文件夹（⌘ + Shift + K）后重新编译
+A: Clean build folder (⌘ + Shift + K) and recompile
 
-### Q: 如何添加新的事件数据？
+### Q: How to add new event data?
 
-A: 在`MockData.swift`中的`historicalEvents`数组添加新项目
+A: Add new items to the `eventGroups` array in `MockData.swift`
 
-### Q: 真机测试需要开发者账号吗？
+### Q: Do I need a developer account for device testing?
 
-A: 不需要，使用免费 Apple ID 即可进行真机测试
+A: No, you can use a free Apple ID for device testing
 
-## 📞 支持
+### Q: How to set up AI explanations?
 
-如有问题或建议，请通过以下方式联系：
+A: Copy `TradeSense/Config/config.example.plist` to `config.plist` and add your DeepSeek API key
 
--   提交 GitHub Issue
--   发送邮件至开发团队
+## 📞 Support
+
+For questions or suggestions, please contact us through:
+
+-   Submit GitHub Issues
+-   Email the development team
 
 ---
 
-**TradeSense** - 培养你的交易直觉，做出更明智的投资决策！
+**TradeSense** - Develop your trading intuition and make smarter investment decisions!
