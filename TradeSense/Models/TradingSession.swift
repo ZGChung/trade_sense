@@ -9,11 +9,13 @@ class TradingSession: ObservableObject {
     @Published var correctPredictions: Int = 0
     @Published var currentStreak: Int = 0
     @Published var maxStreak: Int = 0
-    
-    private let mockData = MockData.shared
-    
+
+    private let dataService = DataMigrationService.shared
+
     init() {
-        self.currentEventGroup = mockData.getRandomEventGroup()
+        // Initialize database with mock data if empty
+        dataService.initializeWithMockData()
+        self.currentEventGroup = dataService.getRandomEventGroup() ?? MockData.shared.getRandomEventGroup()
     }
     
     var currentEvent: HistoricalEvent {
@@ -57,18 +59,18 @@ class TradingSession: ObservableObject {
     
     func nextEvent() {
         // 每次都获取新的事件组，因为用户对整个组进行一次判断
-        currentEventGroup = mockData.getRandomEventGroup()
+        currentEventGroup = dataService.getRandomEventGroup() ?? MockData.shared.getRandomEventGroup()
         currentEventIndex = 0
         userPrediction = nil
         showResult = false
     }
-    
+
     func resetSession() {
         totalAttempts = 0
         correctPredictions = 0
         currentStreak = 0
         maxStreak = 0
-        currentEventGroup = mockData.getRandomEventGroup()
+        currentEventGroup = dataService.getRandomEventGroup() ?? MockData.shared.getRandomEventGroup()
         currentEventIndex = 0
         userPrediction = nil
         showResult = false
