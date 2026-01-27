@@ -1,6 +1,8 @@
 # TradeSense 📈
 
-An iOS app designed to train trading intuition through historical events and stock performance data, helping users develop market sensitivity.
+A web application designed to train trading intuition through historical events and stock performance data, helping users develop market sensitivity.
+
+> **Note**: The iOS version has been archived and is available in the `TradeSense/` directory for reference. The active development is now focused on the web version.
 
 <img width="671" height="487" alt="Screenshot 2025-09-13 at 4 38 52 PM" src="https://github.com/user-attachments/assets/3a21581c-b3f7-4385-a568-1c9d6173d991" />
 
@@ -38,73 +40,102 @@ TradeSense aims to help users practice predicting stock price movements in a sim
 
 ## 🛠 Tech Stack
 
+### Web Version (Active)
+-   **React 18** - UI framework
+-   **TypeScript** - Type safety
+-   **Vite** - Build tool and dev server
+-   **Tailwind CSS** - Styling
+-   **Vercel** - Deployment platform
+-   **DeepSeek API** - AI-powered explanations
+
+### iOS Version (Archived)
 -   **SwiftUI** - Declarative UI framework
 -   **Swift** - iOS native development language
 -   **MVVM Architecture** - Separation of data and UI
 -   **@Published** - Reactive state management
--   **DeepSeek API** - AI-powered explanations
--   **Mock Data** - 12 real historical cases
 
 ## 🚀 Quick Start
 
-### Requirements
+### Web Version (Recommended)
 
--   macOS 13.0+
--   Xcode 15.0+
--   iOS 17.0+
+#### Requirements
+- Node.js 18+ and npm
 
-### Installation Steps
+#### Installation Steps
 
 1. Clone the project
+   ```bash
+   git clone <repository-url>
+   cd trade_sense
+   ```
 
-    ```bash
-    git clone <repository-url>
-    cd trade_sense
-    ```
+2. Navigate to web directory
+   ```bash
+   cd web
+   ```
 
-2. Open Xcode project
+3. Install dependencies
+   ```bash
+   npm install
+   ```
 
-    ```bash
-    open TradeSense/TradeSense.xcodeproj
-    ```
+4. Set up environment variables
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your DeepSeek API key
+   ```
 
-3. Select simulator device (iPhone 15 Pro recommended)
+5. Start development server
+   ```bash
+   npm run dev
+   ```
 
-4. Build and run
-    - Shortcut: `⌘ + R`
-    - Or click the play button in Xcode toolbar
+6. Open your browser to `http://localhost:5173`
 
-### Device Testing
+#### Deployment to Vercel
 
-1. Connect iPhone device
-2. Select your device in Xcode
-3. Sign with free Apple ID
-4. Run test
+1. Push your code to GitHub
+2. Import the project in [Vercel](https://vercel.com)
+3. Add environment variable `VITE_DEEPSEEK_API_KEY` in Vercel dashboard
+4. Deploy!
+
+### iOS Version (Archived)
+
+The iOS version is archived in the `TradeSense/` directory. To use it:
+
+1. Open Xcode project: `open TradeSense/TradeSense.xcodeproj`
+2. Requirements: macOS 13.0+, Xcode 15.0+, iOS 17.0+
+3. Build and run with `⌘ + R`
 
 ## 📁 Project Structure
 
 ```
-TradeSense/
-├── TradeSenseApp.swift          # App entry point
-├── ContentView.swift            # Main interface
-├── Models/                      # Data models
-│   ├── HistoricalEvent.swift    # Historical event model
-│   ├── PredictionOption.swift   # Prediction option enum
-│   ├── EventGroup.swift         # Event group model
-│   ├── TradingSession.swift     # Trading session management
-│   └── MockData.swift           # Mock data source
-├── Views/                       # UI components
-│   ├── EventCard.swift          # Event display card
-│   ├── PredictionButton.swift   # Prediction button
-│   ├── ResultView.swift         # Result display view
-│   └── StatsView.swift          # Statistics panel
-├── Services/                    # External services
-│   └── DeepSeekService.swift    # AI explanation service
-├── Config/                      # Configuration
-│   ├── APIConfig.swift          # API configuration
-│   └── config.example.plist     # Config template
-├── Assets.xcassets/            # Asset files
-└── Preview Content/            # Preview assets
+trade_sense/
+├── TradeSense/                  # Archived iOS version
+│   └── ... (iOS Swift code)
+├── web/                         # Web application (Active)
+│   ├── src/
+│   │   ├── components/         # React components
+│   │   │   ├── EventCard.tsx
+│   │   │   ├── PredictionButton.tsx
+│   │   │   ├── ResultView.tsx
+│   │   │   └── StatsView.tsx
+│   │   ├── models/              # TypeScript models
+│   │   │   ├── types.ts
+│   │   │   └── mockData.ts
+│   │   ├── services/            # API services
+│   │   │   └── deepSeekService.ts
+│   │   ├── hooks/               # Custom React hooks
+│   │   │   └── useTradingSession.ts
+│   │   ├── App.tsx              # Main app component
+│   │   └── main.tsx             # Entry point
+│   ├── public/                  # Static assets
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── vercel.json              # Vercel deployment config
+│   └── .env.example             # Environment variable template
+└── README.md
 ```
 
 ## 🎮 Usage Guide
@@ -196,7 +227,9 @@ A: No, you can use a free Apple ID for device testing
 
 ### Q: How to set up AI explanations?
 
-A: Copy `TradeSense/Config/config.example.plist` to `config.plist` and add your DeepSeek API key
+**Web Version**: Copy `web/.env.example` to `web/.env` and add your DeepSeek API key
+
+**iOS Version (Archived)**: Copy `TradeSense/Config/config.example.plist` to `config.plist` and add your DeepSeek API key
 
 ## 📞 Support
 
