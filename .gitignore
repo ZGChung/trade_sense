@@ -54,3 +54,13 @@ config.plist
 # Sensitive files
 *.key
 *.secret
+
+# Web app
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+web/.env.*.local
+
+# Vite
+web/.vite/
