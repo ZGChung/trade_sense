@@ -9,6 +9,8 @@ interface ResultViewProps {
   event: HistoricalEvent;
   userPrediction: PredictionOption;
   onContinue: () => void;
+  totalAttempts: number;
+  correctPredictions: number;
 }
 
 export function ResultView({
@@ -16,6 +18,8 @@ export function ResultView({
   event,
   userPrediction,
   onContinue,
+  totalAttempts,
+  correctPredictions,
 }: ResultViewProps) {
   const [aiExplanation, setAiExplanation] = useState<string>("");
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
@@ -24,6 +28,9 @@ export function ResultView({
   const isCorrect = userPrediction === getPerformanceCategory(event.actualPerformance);
   const resultColor = isCorrect ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
   const resultIcon = isCorrect ? "✓" : "✗";
+
+  const accuracy = totalAttempts > 0 ? ((correctPredictions / totalAttempts) * 100).toFixed(1) : "0";
+  const stockName = eventGroup.stockName;
 
   useEffect(() => {
     loadAIExplanation();
@@ -111,6 +118,18 @@ export function ResultView({
           className="w-full py-4 px-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors duration-200 mt-6"
         >
           继续练习
+        </button>
+
+        {/* Share Result */}
+        <button
+          onClick={() => {
+            const text = `我在 TradeSense 预测 ${stockName}：${isCorrect ? "✅ 正确" : "❌ 错误"} | 正确率: ${accuracy}%`;
+            navigator.clipboard.writeText(text);
+            alert("已复制到剪贴板！");
+          }}
+          className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium rounded-xl transition-colors duration-200 mt-2"
+        >
+          📤 分享结果
         </button>
       </div>
     </div>

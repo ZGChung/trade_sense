@@ -131,6 +131,8 @@ function App() {
               event={finalEvent}
               userPrediction={session.userPrediction}
               onContinue={session.nextEvent}
+              totalAttempts={session.totalAttempts}
+              correctPredictions={session.correctPredictions}
             />
           ) : null}
         </div>
