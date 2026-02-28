@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type {
   PredictionOption,
   TradingSessionState,
@@ -6,17 +6,60 @@ import type {
 import { getPerformanceCategory } from "../models/types";
 import { getRandomEventGroup } from "../models/mockData";
 
+const STORAGE_KEY = "tradesense_stats";
+
+interface StoredStats {
+  totalAttempts: number;
+  correctPredictions: number;
+  currentStreak: number;
+  maxStreak: number;
+}
+
+function loadStats(): StoredStats {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn("Failed to load stats from localStorage:", e);
+  }
+  return {
+    totalAttempts: 0,
+    correctPredictions: 0,
+    currentStreak: 0,
+    maxStreak: 0,
+  };
+}
+
+function saveStats(stats: StoredStats) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+  } catch (e) {
+    console.warn("Failed to save stats to localStorage:", e);
+  }
+}
+
 export function useTradingSession() {
+  const storedStats = loadStats();
+
   const [state, setState] = useState<TradingSessionState>(() => ({
     currentEventGroup: getRandomEventGroup(),
     currentEventIndex: 0,
     userPrediction: null,
     showResult: false,
-    totalAttempts: 0,
-    correctPredictions: 0,
-    currentStreak: 0,
-    maxStreak: 0,
+    ...storedStats,
   }));
+
+  // Persist stats to localStorage when they change
+  useEffect(() => {
+    saveStats({
+      totalAttempts: state.totalAttempts,
+      correctPredictions: state.correctPredictions,
+      currentStreak: state.currentStreak,
+      maxStreak: state.maxStreak,
+    });
+  }, [state.totalAttempts, state.correctPredictions, state.currentStreak, state.maxStreak]);
 
   const accuracy =
     state.totalAttempts > 0
@@ -70,11 +113,18 @@ export function useTradingSession() {
   }, []);
 
   const resetSession = useCallback(() => {
-    setState({
+    const newStats = {
       currentEventGroup: getRandomEventGroup(),
       currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
+      totalAttempts: 0,
+      correctPredictions: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+    };
+    setState(newStats);
+    saveStats({
       totalAttempts: 0,
       correctPredictions: 0,
       currentStreak: 0,

@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
 import { StatsView } from "./components/StatsView";
-import { PredictionOption as PredictionOptionValues } from "./models/types";
-import type { PredictionOption } from "./models/types";
+import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
 function App() {
   const session = useTradingSession();
@@ -15,6 +14,48 @@ function App() {
     session.currentEventGroup.events[
       session.currentEventGroup.events.length - 1
     ];
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Prediction shortcuts (when not showing result)
+      if (!session.showResult) {
+        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+          e.preventDefault();
+          session.makePrediction(PredictionOptionValues.RISE);
+        } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+          e.preventDefault();
+          session.makePrediction(PredictionOptionValues.FALL);
+        } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+          e.preventDefault();
+          session.makePrediction(PredictionOptionValues.FLAT);
+        }
+      } else {
+        // Continue / Next
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          session.nextEvent();
+        }
+      }
+
+      // Global shortcuts
+      if (e.key === "h" || e.key === "H") {
+        e.preventDefault();
+        setShowStats((prev) => !prev);
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        session.resetSession();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [session]);
 
   // Safety check - ensure we have events
   if (!finalEvent || session.currentEventGroup.events.length === 0) {
@@ -37,6 +78,9 @@ function App() {
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
             训练你的交易直觉
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | R重置
           </p>
         </div>
 
