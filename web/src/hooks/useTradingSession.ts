@@ -246,7 +246,7 @@ export function useTradingSession() {
       currentStreak: 0,
       maxStreak: 0,
     });
-  }, []);
+  }, [getRandomEvent, selectedCategory]);
 
   const changeMode = useCallback((mode: PracticeMode) => {
     setPracticeMode(mode);

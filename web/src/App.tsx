@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
@@ -16,6 +16,25 @@ function App() {
   const session = useTradingSession();
   const [showStats, setShowStats] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('tradesense_darkmode');
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  // Apply dark mode class
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('tradesense_darkmode', String(darkMode));
+  }, [darkMode]);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+  }, []);
   
   const achievements = useAchievements(
     session.totalAttempts,
@@ -122,6 +141,15 @@ function App() {
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6 pt-4">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className="fixed top-4 right-4 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+            title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
+          
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
               TradeSense
