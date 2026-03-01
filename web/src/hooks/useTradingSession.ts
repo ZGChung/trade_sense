@@ -6,6 +6,7 @@ import type {
 import { getPerformanceCategory } from "../models/types";
 import { getRandomEventGroup } from "../models/mockData";
 import type { PracticeMode } from "../components/ModeSelector";
+import { playSound, vibrate } from "../utils/sound";
 
 const STORAGE_KEY = "tradesense_stats";
 const MODE_STORAGE_KEY = "tradesense_mode";
@@ -113,13 +114,19 @@ export function useTradingSession() {
         newCorrectPredictions += 1;
         newCurrentStreak += 1;
         newMaxStreak = Math.max(newMaxStreak, newCurrentStreak);
+        playSound('correct');
+        vibrate('light');
       } else {
         newCurrentStreak = 0;
+        playSound('wrong');
+        vibrate('medium');
       }
 
       // Challenge mode: game over on wrong answer
       if (practiceMode === "challenge" && !isCorrect) {
         setChallengeScore(prev.totalAttempts);
+        playSound('success');
+        vibrate('heavy');
       }
 
       return {
