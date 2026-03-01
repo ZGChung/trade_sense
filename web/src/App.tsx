@@ -1,16 +1,34 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTradingSession } from "./hooks/useTradingSession";
+import { useAchievements } from "./hooks/useAchievements";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
 import { StatsView } from "./components/StatsView";
 import { ModeSelector, ModeBadge } from "./components/ModeSelector";
+import { AchievementBadge, AchievementToast } from "./components/AchievementBadge";
+import { AchievementPanel } from "./components/AchievementPanel";
 import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
 function App() {
   const session = useTradingSession();
   const [showStats, setShowStats] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  
+  const achievements = useAchievements(
+    session.totalAttempts,
+    session.currentStreak,
+    session.maxStreak,
+    session.challengeScore
+  );
+  
+  // Check achievements after each prediction
+  useEffect(() => {
+    if (session.totalAttempts > 0) {
+      achievements.checkAndUnlockAchievements();
+    }
+  }, [session.totalAttempts, session.currentStreak, session.maxStreak, session.challengeScore]);
 
   const finalEvent =
     session.currentEventGroup.events[
@@ -49,6 +67,9 @@ function App() {
       if (e.key === "h" || e.key === "H") {
         e.preventDefault();
         setShowStats((prev) => !prev);
+      } else if (e.key === "o" || e.key === "O") {
+        e.preventDefault();
+        setShowAchievements((prev) => !prev);
       } else if (e.key === "r" || e.key === "R") {
         e.preventDefault();
         session.resetSession();
@@ -72,6 +93,30 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Achievement Badge */}
+      <AchievementBadge 
+        count={achievements.unlockedCount} 
+        total={achievements.totalCount}
+        onClick={() => setShowAchievements(true)}
+      />
+      
+      {/* Achievement Toast */}
+      <AchievementToast 
+        achievement={achievements.newlyUnlocked ?? null}
+        onClose={achievements.clearNewlyUnlocked}
+      />
+      
+      {/* Achievement Panel */}
+      <AnimatePresence>
+        {showAchievements && (
+          <AchievementPanel
+            unlocked={achievements.unlockedAchievements}
+            locked={achievements.lockedAchievements}
+            onClose={() => setShowAchievements(false)}
+          />
+        )}
+      </AnimatePresence>
+      
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6 pt-4">
@@ -85,7 +130,7 @@ function App() {
             训练你的交易直觉
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | R重置
+            快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | O成就 | R重置
           </p>
           
           {/* Challenge Mode Score */}
