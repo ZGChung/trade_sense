@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { EventGroup, HistoricalEvent, PredictionOption } from "../models/types";
 import { getFormattedPerformance, getPerformanceCategory } from "../models/types";
 import { PredictionOptionEmoji } from "../models/types";
@@ -60,8 +61,15 @@ export function ResultView({
   };
 
   return (
-    <div className="w-full p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg">
-      <div className="text-center space-y-4">
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.3 }}
+        className="w-full p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg"
+      >
+        <div className="text-center space-y-4">
         <div className={`text-6xl ${resultColor}`}>{resultIcon}</div>
         <h2 className={`text-2xl font-bold ${resultColor}`}>
           {isCorrect ? "预测正确!" : "预测错误"}
@@ -132,6 +140,7 @@ export function ResultView({
           📤 分享结果
         </button>
       </div>
-    </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

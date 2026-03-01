@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
@@ -82,6 +83,22 @@ function App() {
           <p className="text-xs text-gray-400 mt-1">
             快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | R重置
           </p>
+          
+          {/* Progress Bar */}
+          <div className="mt-4 max-w-xs mx-auto">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <span>练习进度</span>
+              <span>{session.currentEventIndex + 1}/{session.totalEvents}</span>
+            </div>
+            <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
+                initial={{ width: 0 }}
+                animate={{ width: `${((session.currentEventIndex + 1) / session.totalEvents) * 100}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Stats Panel - Collapsible */}

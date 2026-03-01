@@ -134,6 +134,7 @@ export function useTradingSession() {
 
   return {
     ...state,
+    totalEvents: state.currentEventGroup.events.length,
     accuracy,
     formattedAccuracy,
     makePrediction,
