@@ -28,6 +28,7 @@ function App() {
     if (session.totalAttempts > 0) {
       achievements.checkAndUnlockAchievements();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.totalAttempts, session.currentStreak, session.maxStreak, session.challengeScore]);
 
   const finalEvent =

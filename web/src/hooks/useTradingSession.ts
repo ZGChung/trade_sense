@@ -66,25 +66,33 @@ export function useTradingSession() {
   const storedStats = loadStats();
   const storedMode = loadStoredMode();
 
-  const [practiceMode, setPracticeMode] = useState<PracticeMode>(storedMode);
-  const [challengeScore, setChallengeScore] = useState(0);
-  const [dailyScore, setDailyScore] = useState(0);
-  const [dailyHighScore, setDailyHighScore] = useState(getDailyHighScore());
-  const [dailyEvents, setDailyEvents] = useState<EventGroup[]>(() =>
-    getDailyChallenge()
-  );
-  const [dailyEventIndex, setDailyEventIndex] = useState(0);
-
-  // Check for new day
-  useEffect(() => {
+  // Initialize daily challenge with lazy state check
+  const getInitialDailyState = (): { events: EventGroup[]; index: number; score: number; highScore: number } => {
     const info = getDailyChallengeInfo();
     if (info.isNewDay) {
-      setDailyEvents(getDailyChallenge());
-      setDailyEventIndex(0);
-      setDailyScore(0);
-      setDailyHighScore(getDailyHighScore());
+      return {
+        events: getDailyChallenge(),
+        index: 0,
+        score: 0,
+        highScore: getDailyHighScore(),
+      };
     }
-  }, []);
+    return {
+      events: getDailyChallenge(),
+      index: 0,
+      score: 0,
+      highScore: getDailyHighScore(),
+    };
+  };
+
+  const initialDailyState = getInitialDailyState();
+
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>(storedMode);
+  const [challengeScore, setChallengeScore] = useState(0);
+  const [dailyScore, setDailyScore] = useState(initialDailyState.score);
+  const [dailyHighScore, setDailyHighScore] = useState(initialDailyState.highScore);
+  const [dailyEvents] = useState<EventGroup[]>(initialDailyState.events);
+  const [dailyEventIndex, setDailyEventIndex] = useState(initialDailyState.index);
 
   const [state, setState] = useState<TradingSessionState>(() => ({
     currentEventGroup: getRandomEventGroup(),
