@@ -5,6 +5,7 @@ import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
 import { StatsView } from "./components/StatsView";
+import { ModeSelector, ModeBadge } from "./components/ModeSelector";
 import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
 function App() {
@@ -74,15 +75,29 @@ function App() {
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6 pt-4">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            TradeSense
-          </h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+              TradeSense
+            </h1>
+            <ModeBadge mode={session.practiceMode} />
+          </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">
             训练你的交易直觉
           </p>
           <p className="text-xs text-gray-400 mt-1">
             快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | R重置
           </p>
+          
+          {/* Challenge Mode Score */}
+          {session.practiceMode === "challenge" && session.challengeScore > 0 && (
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="mt-3 inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-lg"
+            >
+              🎯 挑战得分: {session.challengeScore}
+            </motion.div>
+          )}
           
           {/* Progress Bar */}
           <div className="mt-4 max-w-xs mx-auto">
@@ -100,6 +115,13 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* Mode Selector */}
+        <ModeSelector
+          currentMode={session.practiceMode}
+          onModeChange={session.changeMode}
+          isVisible={!session.showResult}
+        />
 
         {/* Stats Panel - Collapsible */}
         <div

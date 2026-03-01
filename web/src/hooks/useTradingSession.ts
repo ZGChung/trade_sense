@@ -5,14 +5,28 @@ import type {
 } from "../models/types";
 import { getPerformanceCategory } from "../models/types";
 import { getRandomEventGroup } from "../models/mockData";
+import type { PracticeMode } from "../components/ModeSelector";
 
 const STORAGE_KEY = "tradesense_stats";
+const MODE_STORAGE_KEY = "tradesense_mode";
 
 interface StoredStats {
   totalAttempts: number;
   correctPredictions: number;
   currentStreak: number;
   maxStreak: number;
+}
+
+function loadStoredMode(): PracticeMode {
+  try {
+    const saved = localStorage.getItem(MODE_STORAGE_KEY);
+    if (saved === "challenge" || saved === "casual") {
+      return saved;
+    }
+  } catch (e) {
+    console.warn("Failed to load mode from localStorage:", e);
+  }
+  return "casual";
 }
 
 function loadStats(): StoredStats {
@@ -42,6 +56,10 @@ function saveStats(stats: StoredStats) {
 
 export function useTradingSession() {
   const storedStats = loadStats();
+  const storedMode = loadStoredMode();
+
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>(storedMode);
+  const [challengeScore, setChallengeScore] = useState(0);
 
   const [state, setState] = useState<TradingSessionState>(() => ({
     currentEventGroup: getRandomEventGroup(),
@@ -50,6 +68,15 @@ export function useTradingSession() {
     showResult: false,
     ...storedStats,
   }));
+
+  // Persist mode to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(MODE_STORAGE_KEY, practiceMode);
+    } catch (e) {
+      console.warn("Failed to save mode to localStorage:", e);
+    }
+  }, [practiceMode]);
 
   // Persist stats to localStorage when they change
   useEffect(() => {
@@ -90,6 +117,11 @@ export function useTradingSession() {
         newCurrentStreak = 0;
       }
 
+      // Challenge mode: game over on wrong answer
+      if (practiceMode === "challenge" && !isCorrect) {
+        setChallengeScore(prev.totalAttempts);
+      }
+
       return {
         ...prev,
         userPrediction: prediction,
@@ -100,7 +132,7 @@ export function useTradingSession() {
         showResult: true,
       };
     });
-  }, []);
+  }, [practiceMode]);
 
   const nextEvent = useCallback(() => {
     setState((prev) => ({
@@ -124,12 +156,18 @@ export function useTradingSession() {
       maxStreak: 0,
     };
     setState(newStats);
+    setChallengeScore(0);
     saveStats({
       totalAttempts: 0,
       correctPredictions: 0,
       currentStreak: 0,
       maxStreak: 0,
     });
+  }, []);
+
+  const changeMode = useCallback((mode: PracticeMode) => {
+    setPracticeMode(mode);
+    setChallengeScore(0);
   }, []);
 
   return {
@@ -140,5 +178,8 @@ export function useTradingSession() {
     makePrediction,
     nextEvent,
     resetSession,
+    practiceMode,
+    changeMode,
+    challengeScore,
   };
 }
