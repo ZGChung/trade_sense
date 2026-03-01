@@ -213,6 +213,8 @@ function App() {
         <StockFilter
           selectedCategory={session.selectedCategory}
           onCategoryChange={session.changeCategory}
+          searchQuery={session.searchQuery}
+          onSearchChange={session.changeSearch}
         />
 
         {/* Stats Panel - Collapsible */}

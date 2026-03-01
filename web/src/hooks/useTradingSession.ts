@@ -90,16 +90,30 @@ export function useTradingSession() {
 
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(storedMode);
   const [selectedCategory, setSelectedCategory] = useState<StockCategory | "全部">("全部");
+  const [searchQuery, setSearchQuery] = useState("");
   const [challengeScore, setChallengeScore] = useState(0);
 
-  // Get random event group based on selected category
-  const getRandomEvent = useCallback((category: StockCategory | "全部"): EventGroup => {
-    if (category === "全部") {
-      return getRandomEventGroup();
+  // Get random event group based on selected category and search query
+  const getRandomEvent = useCallback((category: StockCategory | "全部", search: string = ""): EventGroup => {
+    let filtered = mockData;
+    
+    // Filter by category
+    if (category !== "全部") {
+      filtered = filtered.filter(
+        (eg) => getStockCategory(eg.stockSymbol) === category
+      );
     }
-    const filtered = mockData.filter(
-      (eg) => getStockCategory(eg.stockSymbol) === category
-    );
+    
+    // Filter by search query
+    if (search.trim()) {
+      const query = search.toLowerCase().trim();
+      filtered = filtered.filter(
+        (eg) => 
+          eg.stockSymbol.toLowerCase().includes(query) || 
+          eg.stockName.toLowerCase().includes(query)
+      );
+    }
+    
     if (filtered.length === 0) {
       return getRandomEventGroup();
     }
@@ -268,12 +282,24 @@ export function useTradingSession() {
     // Get new event with the selected category
     setState((prev) => ({
       ...prev,
-      currentEventGroup: getRandomEvent(category),
+      currentEventGroup: getRandomEvent(category, searchQuery),
       currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
     }));
-  }, [getRandomEvent]);
+  }, [getRandomEvent, searchQuery]);
+
+  const changeSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    // Get new event with the search query
+    setState((prev) => ({
+      ...prev,
+      currentEventGroup: getRandomEvent(selectedCategory, query),
+      currentEventIndex: 0,
+      userPrediction: null,
+      showResult: false,
+    }));
+  }, [getRandomEvent, selectedCategory]);
 
   return {
     ...state,
@@ -286,7 +312,9 @@ export function useTradingSession() {
     practiceMode,
     changeMode,
     changeCategory,
+    changeSearch,
     selectedCategory,
+    searchQuery,
     challengeScore,
     dailyScore,
     dailyHighScore,
