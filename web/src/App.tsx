@@ -9,6 +9,7 @@ import { StatsView } from "./components/StatsView";
 import { ModeSelector, ModeBadge } from "./components/ModeSelector";
 import { AchievementBadge, AchievementToast } from "./components/AchievementBadge";
 import { AchievementPanel } from "./components/AchievementPanel";
+import { StockFilter } from "./components/StockFilter";
 import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
 function App() {
@@ -178,6 +179,12 @@ function App() {
           currentMode={session.practiceMode}
           onModeChange={session.changeMode}
           isVisible={!session.showResult}
+        />
+
+        {/* Stock Category Filter */}
+        <StockFilter
+          selectedCategory={session.selectedCategory}
+          onCategoryChange={session.changeCategory}
         />
 
         {/* Stats Panel - Collapsible */}

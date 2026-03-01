@@ -22,10 +22,27 @@ export interface HistoricalEvent {
   daysAfterEvent: number; // Days after event for performance measurement
 }
 
+// Stock categories
+export const StockCategory = {
+  TECH: "科技",
+  FINANCE: "金融",
+  CONSUMER: "消费",
+  ENERGY: "能源",
+  MEDICAL: "医疗",
+  OTHER: "其他",
+} as const;
+
+export type StockCategory = typeof StockCategory[keyof typeof StockCategory];
+
+export function getAllCategories(): StockCategory[] {
+  return Object.values(StockCategory).filter((c): c is StockCategory => c !== StockCategory.OTHER);
+}
+
 export interface EventGroup {
   id: string;
   stockSymbol: string;
   stockName: string;
+  category?: StockCategory;
   events: HistoricalEvent[];
 }
 

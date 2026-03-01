@@ -3,9 +3,10 @@ import type {
   PredictionOption,
   TradingSessionState,
   EventGroup,
+  StockCategory,
 } from "../models/types";
 import { getPerformanceCategory } from "../models/types";
-import { getRandomEventGroup } from "../models/mockData";
+import { mockData, getRandomEventGroup, getStockCategory } from "../models/mockData";
 import type { PracticeMode } from "../components/ModeSelector";
 import { playSound, vibrate } from "../utils/sound";
 import {
@@ -88,14 +89,29 @@ export function useTradingSession() {
   const initialDailyState = getInitialDailyState();
 
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(storedMode);
+  const [selectedCategory, setSelectedCategory] = useState<StockCategory | "全部">("全部");
   const [challengeScore, setChallengeScore] = useState(0);
+
+  // Get random event group based on selected category
+  const getRandomEvent = useCallback((category: StockCategory | "全部"): EventGroup => {
+    if (category === "全部") {
+      return getRandomEventGroup();
+    }
+    const filtered = mockData.filter(
+      (eg) => getStockCategory(eg.stockSymbol) === category
+    );
+    if (filtered.length === 0) {
+      return getRandomEventGroup();
+    }
+    return filtered[Math.floor(Math.random() * filtered.length)];
+  }, []);
   const [dailyScore, setDailyScore] = useState(initialDailyState.score);
   const [dailyHighScore, setDailyHighScore] = useState(initialDailyState.highScore);
   const [dailyEvents] = useState<EventGroup[]>(initialDailyState.events);
   const [dailyEventIndex, setDailyEventIndex] = useState(initialDailyState.index);
 
   const [state, setState] = useState<TradingSessionState>(() => ({
-    currentEventGroup: getRandomEventGroup(),
+    currentEventGroup: getRandomEvent("全部"),
     currentEventIndex: 0,
     userPrediction: null,
     showResult: false,
@@ -202,16 +218,16 @@ export function useTradingSession() {
       ...prev,
       currentEventGroup: practiceMode === "daily" 
         ? dailyEvents[dailyEventIndex] 
-        : getRandomEventGroup(),
+        : getRandomEvent(selectedCategory),
       currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
     }));
-  }, [practiceMode, dailyEvents, dailyEventIndex]);
+  }, [practiceMode, dailyEvents, dailyEventIndex, getRandomEvent, selectedCategory]);
 
   const resetSession = useCallback(() => {
     const newStats = {
-      currentEventGroup: getRandomEventGroup(),
+      currentEventGroup: getRandomEvent(selectedCategory),
       currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
@@ -247,6 +263,18 @@ export function useTradingSession() {
     }
   }, [dailyEvents]);
 
+  const changeCategory = useCallback((category: StockCategory | "全部") => {
+    setSelectedCategory(category);
+    // Get new event with the selected category
+    setState((prev) => ({
+      ...prev,
+      currentEventGroup: getRandomEvent(category),
+      currentEventIndex: 0,
+      userPrediction: null,
+      showResult: false,
+    }));
+  }, [getRandomEvent]);
+
   return {
     ...state,
     totalEvents: practiceMode === "daily" ? dailyEvents.length : state.currentEventGroup.events.length,
@@ -257,6 +285,8 @@ export function useTradingSession() {
     resetSession,
     practiceMode,
     changeMode,
+    changeCategory,
+    selectedCategory,
     challengeScore,
     dailyScore,
     dailyHighScore,

@@ -1,4 +1,4 @@
-import type { EventGroup } from "./types";
+import { type EventGroup, StockCategory } from "./types";
 
 let idCounter = 0;
 function generateId(): string {
@@ -1894,4 +1894,32 @@ export const mockData: EventGroup[] = [
 
 export function getRandomEventGroup(): EventGroup {
   return mockData[Math.floor(Math.random() * mockData.length)];
+}
+
+// Stock category mapping
+const STOCK_CATEGORIES: Record<string, StockCategory> = {
+  // Tech
+  AAPL: "科技", MSFT: "科技", GOOGL: "科技", META: "科技", AMZN: "科技",
+  NVDA: "科技", AMD: "科技", INTC: "科技", AVGO: "科技", TSLA: "科技",
+  NFLX: "科技", ORCL: "科技", CSCO: "科技", AMAT: "科技", ASML: "科技",
+  MU: "科技", QCOM: "科技", TSM: "科技", TXN: "科技", CRM: "科技", PDD: "科技",
+  // Finance
+  JPM: "金融",
+  // Consumer
+  HD: "消费", MCD: "消费", KO: "消费", PG: "消费", WMT: "消费", NKE: "消费",
+  SBUX: "消费", DIS: "消费", BABA: "消费", JD: "消费",
+  // Energy
+  XOM: "能源", CVX: "能源",
+  // Medical
+  JNJ: "医疗", PFE: "医疗", UNH: "医疗", ABBV: "医疗", MRK: "医疗",
+  LLY: "医疗", NVS: "医疗", AZN: "医疗", GILD: "医疗",
+  REGN: "医疗", MRNA: "医疗", SNY: "医疗", RHHBY: "医疗", NVO: "医疗",
+};
+
+export function getStockCategory(stockSymbol: string): StockCategory {
+  return STOCK_CATEGORIES[stockSymbol] || "其他";
+}
+
+export function getAllCategories(): StockCategory[] {
+  return Object.values(StockCategory);
 }
