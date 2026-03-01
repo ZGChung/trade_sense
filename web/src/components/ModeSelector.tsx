@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsomorphicEffect } from "../hooks/useIsomorphicEffect";
 
 export type PracticeMode = "casual" | "challenge";
 
@@ -12,9 +13,9 @@ interface ModeSelectorProps {
 export function ModeSelector({ currentMode, onModeChange, isVisible }: ModeSelectorProps) {
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
+  useIsomorphicEffect(() => {
     setIsClient(true);
-  }, []);
+  });
 
   if (!isClient || !isVisible) return null;
 
