@@ -144,6 +144,17 @@ function App() {
             </motion.div>
           )}
           
+          {/* Daily Challenge Score */}
+          {session.practiceMode === "daily" && (
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="mt-3 inline-block bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-4 py-2 rounded-lg"
+            >
+              📅 今日得分: {session.dailyScore} | 最高: {session.dailyHighScore}
+            </motion.div>
+          )}
+          
           {/* Progress Bar */}
           <div className="mt-4 max-w-xs mx-auto">
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">

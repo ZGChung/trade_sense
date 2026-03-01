@@ -2,11 +2,18 @@ import { useState, useCallback, useEffect } from "react";
 import type {
   PredictionOption,
   TradingSessionState,
+  EventGroup,
 } from "../models/types";
 import { getPerformanceCategory } from "../models/types";
 import { getRandomEventGroup } from "../models/mockData";
 import type { PracticeMode } from "../components/ModeSelector";
 import { playSound, vibrate } from "../utils/sound";
+import {
+  getDailyChallenge,
+  getDailyChallengeInfo,
+  saveDailyHighScore,
+  getDailyHighScore,
+} from "../services/dailyChallenge";
 
 const STORAGE_KEY = "tradesense_stats";
 const MODE_STORAGE_KEY = "tradesense_mode";
@@ -21,7 +28,7 @@ interface StoredStats {
 function loadStoredMode(): PracticeMode {
   try {
     const saved = localStorage.getItem(MODE_STORAGE_KEY);
-    if (saved === "challenge" || saved === "casual") {
+    if (saved === "challenge" || saved === "casual" || saved === "daily") {
       return saved;
     }
   } catch (e) {
@@ -61,6 +68,23 @@ export function useTradingSession() {
 
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(storedMode);
   const [challengeScore, setChallengeScore] = useState(0);
+  const [dailyScore, setDailyScore] = useState(0);
+  const [dailyHighScore, setDailyHighScore] = useState(getDailyHighScore());
+  const [dailyEvents, setDailyEvents] = useState<EventGroup[]>(() =>
+    getDailyChallenge()
+  );
+  const [dailyEventIndex, setDailyEventIndex] = useState(0);
+
+  // Check for new day
+  useEffect(() => {
+    const info = getDailyChallengeInfo();
+    if (info.isNewDay) {
+      setDailyEvents(getDailyChallenge());
+      setDailyEventIndex(0);
+      setDailyScore(0);
+      setDailyHighScore(getDailyHighScore());
+    }
+  }, []);
 
   const [state, setState] = useState<TradingSessionState>(() => ({
     currentEventGroup: getRandomEventGroup(),
@@ -98,12 +122,13 @@ export function useTradingSession() {
 
   const makePrediction = useCallback((prediction: PredictionOption) => {
     setState((prev) => {
-      const finalEvent = prev.currentEventGroup.events[
-        prev.currentEventGroup.events.length - 1
-      ];
-      const correctAnswer = getPerformanceCategory(
-        finalEvent.actualPerformance
-      );
+      // For daily mode, use daily events
+      const eventGroup = practiceMode === "daily" 
+        ? dailyEvents[dailyEventIndex] 
+        : prev.currentEventGroup;
+      
+      const finalEvent = eventGroup.events[eventGroup.events.length - 1];
+      const correctAnswer = getPerformanceCategory(finalEvent.actualPerformance);
       const isCorrect = prediction === correctAnswer;
 
       let newCorrectPredictions = prev.correctPredictions;
@@ -131,6 +156,7 @@ export function useTradingSession() {
 
       return {
         ...prev,
+        currentEventGroup: eventGroup,
         userPrediction: prediction,
         totalAttempts: prev.totalAttempts + 1,
         correctPredictions: newCorrectPredictions,
@@ -139,17 +165,41 @@ export function useTradingSession() {
         showResult: true,
       };
     });
-  }, [practiceMode]);
+
+    // Daily mode: track score (outside setState to avoid dependency issues)
+    if (practiceMode === "daily") {
+      setDailyScore((prev) => {
+        const newScore = prev + 1;
+        if (saveDailyHighScore(newScore)) {
+          setDailyHighScore(newScore);
+        }
+        return newScore;
+      });
+    }
+  }, [practiceMode, dailyEvents, dailyEventIndex]);
 
   const nextEvent = useCallback(() => {
+    if (practiceMode === "daily") {
+      // Move to next daily event
+      if (dailyEventIndex < dailyEvents.length - 1) {
+        setDailyEventIndex((prev) => prev + 1);
+      } else {
+        // Daily challenge completed - reset to first event
+        setDailyEventIndex(0);
+        setDailyScore(0);
+      }
+    }
+    
     setState((prev) => ({
       ...prev,
-      currentEventGroup: getRandomEventGroup(),
+      currentEventGroup: practiceMode === "daily" 
+        ? dailyEvents[dailyEventIndex] 
+        : getRandomEventGroup(),
       currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
     }));
-  }, []);
+  }, [practiceMode, dailyEvents, dailyEventIndex]);
 
   const resetSession = useCallback(() => {
     const newStats = {
@@ -164,6 +214,8 @@ export function useTradingSession() {
     };
     setState(newStats);
     setChallengeScore(0);
+    setDailyEventIndex(0);
+    setDailyScore(0);
     saveStats({
       totalAttempts: 0,
       correctPredictions: 0,
@@ -175,11 +227,21 @@ export function useTradingSession() {
   const changeMode = useCallback((mode: PracticeMode) => {
     setPracticeMode(mode);
     setChallengeScore(0);
-  }, []);
+    setDailyEventIndex(0);
+    setDailyScore(0);
+    
+    // Reset to appropriate starting event group
+    if (mode === "daily") {
+      setState((prev) => ({
+        ...prev,
+        currentEventGroup: dailyEvents[0],
+      }));
+    }
+  }, [dailyEvents]);
 
   return {
     ...state,
-    totalEvents: state.currentEventGroup.events.length,
+    totalEvents: practiceMode === "daily" ? dailyEvents.length : state.currentEventGroup.events.length,
     accuracy,
     formattedAccuracy,
     makePrediction,
@@ -188,5 +250,7 @@ export function useTradingSession() {
     practiceMode,
     changeMode,
     challengeScore,
+    dailyScore,
+    dailyHighScore,
   };
 }
