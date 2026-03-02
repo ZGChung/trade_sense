@@ -12,6 +12,7 @@ import { AchievementBadge, AchievementToast } from "./components/AchievementBadg
 import { AchievementPanel } from "./components/AchievementPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { StockFilter } from "./components/StockFilter";
+import { WelcomeBanner } from "./components/WelcomeBanner";
 import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
 function App() {
@@ -151,6 +152,11 @@ function App() {
         total={achievements.totalCount}
         onClick={() => setShowAchievements(true)}
       />
+      
+      {/* Welcome Banner */}
+      <div className="container mx-auto px-4 pt-14 max-w-2xl">
+        <WelcomeBanner />
+      </div>
       
       {/* Achievement Toast */}
       <AchievementToast 
