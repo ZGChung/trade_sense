@@ -120,14 +120,31 @@ export function HistoryPanel({ onClose }: HistoryPanelProps) {
             </div>
           )}
 
-          {/* Clear History */}
+          {/* Actions */}
           {history.length > 0 && (
-            <button
-              onClick={clearHistory}
-              className="mt-4 w-full py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
-            >
-              🗑️ 清空历史记录
-            </button>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => {
+                  const dataStr = JSON.stringify(history, null, 2);
+                  const blob = new Blob([dataStr], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `tradesense-history-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex-1 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors text-sm"
+              >
+                📥 导出数据
+              </button>
+              <button
+                onClick={clearHistory}
+                className="flex-1 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
+              >
+                🗑️ 清空记录
+              </button>
+            </div>
           )}
         </div>
       </motion.div>
