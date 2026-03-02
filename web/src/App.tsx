@@ -51,7 +51,7 @@ function App() {
 
   // Track previous state to detect when a practice is completed
   const [prevShowResult, setPrevShowResult] = useState(false);
-  const [prevTotalAttempts, setPrevTotalAttempts] = useState(0);
+  const [prevCorrectPredictions, setPrevCorrectPredictions] = useState(0);
 
   // Save practice record when a question is completed
   useEffect(() => {
@@ -59,18 +59,20 @@ function App() {
     if (prevShowResult && !session.showResult && session.totalAttempts > 0) {
       // Save record for casual mode only
       if (session.practiceMode === 'casual') {
+        const isCorrect = session.correctPredictions > prevCorrectPredictions;
         practiceHistory.addRecord({
           mode: 'casual',
           totalQuestions: 1,
-          correctAnswers: prevTotalAttempts < session.totalAttempts ? 1 : 0,
-          accuracy: prevTotalAttempts < session.totalAttempts ? 100 : 0,
+          correctAnswers: isCorrect ? 1 : 0,
+          accuracy: isCorrect ? 100 : 0,
           maxStreak: session.currentStreak,
         });
       }
     }
     setPrevShowResult(session.showResult);
-    setPrevTotalAttempts(session.totalAttempts);
-  }, [session.showResult, session.totalAttempts, session.practiceMode, session.currentStreak, practiceHistory, prevShowResult, prevTotalAttempts]);
+    setPrevCorrectPredictions(session.correctPredictions);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.showResult, session.practiceMode, session.currentStreak]);
   
   // Check achievements after each prediction
   useEffect(() => {
