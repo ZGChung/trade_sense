@@ -1,5 +1,6 @@
 import type { PredictionOption } from "../models/types";
 import { PredictionOption as PredictionOptionValues, PredictionOptionEmoji } from "../models/types";
+import { playSound, vibrate } from "../utils/sound";
 
 interface PredictionButtonProps {
   option: PredictionOption;
@@ -40,7 +41,11 @@ export function PredictionButton({
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        playSound('click');
+        vibrate('light');
+        onClick();
+      }}
       className={`
         w-full min-h-[60px] px-5 py-4 rounded-xl
         flex items-center justify-center gap-4
