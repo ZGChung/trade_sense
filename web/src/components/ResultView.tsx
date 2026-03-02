@@ -142,7 +142,12 @@ export function ResultView({
           onClick={() => {
             const text = `我在 TradeSense 预测 ${stockName}：${isCorrect ? "✅ 正确" : "❌ 错误"} | 正确率: ${accuracy}%`;
             navigator.clipboard.writeText(text);
-            alert("已复制到剪贴板！");
+            // Use toast instead of alert for better UX
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-lg text-sm z-50 animate-fade-in';
+            toast.textContent = '已复制到剪贴板！';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
           }}
           className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium rounded-xl transition-colors duration-200 mt-2"
         >
