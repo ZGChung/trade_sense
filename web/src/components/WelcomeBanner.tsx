@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TIPS = [
@@ -9,25 +9,36 @@ const TIPS = [
   "🔊 尝试开启音效获得更好体验",
 ];
 
+// Use deterministic index based on date
+const getTipOfTheDay = () => {
+  const today = new Date();
+  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+  return TIPS[dayOfYear % TIPS.length];
+};
+
+// Subscribe to localStorage
+const subscribe = (callback: () => void) => {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+};
+const getClientSnapshot = () => {
+  const hasVisited = typeof window !== "undefined" && localStorage.getItem("tradesense_visited");
+  const dismissed = typeof window !== "undefined" && localStorage.getItem("tradesense_welcome_dismissed");
+  return { hasVisited: !!hasVisited, dismissed: !!dismissed };
+};
+const getServerSnapshot = () => ({ hasVisited: false, dismissed: false });
+
 export function WelcomeBanner() {
-  const [show, setShow] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const { hasVisited, dismissed } = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const [show, setShow] = useState(!hasVisited && !dismissed);
+  const tip = getTipOfTheDay();
   
-  useEffect(() => {
-    const hasVisited = localStorage.getItem("tradesense_visited");
-    if (!hasVisited) {
-      setShow(true);
-      localStorage.setItem("tradesense_visited", "true");
-    }
-    const dismissedAt = localStorage.getItem("tradesense_welcome_dismissed");
-    if (dismissedAt) {
-      setDismissed(true);
-    }
-  }, []);
+  const handleDismiss = () => {
+    setShow(false);
+    localStorage.setItem("tradesense_welcome_dismissed", "true");
+  };
   
   if (dismissed) return null;
-  
-  const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
   
   return (
     <AnimatePresence>
@@ -44,11 +55,7 @@ export function WelcomeBanner() {
               <p className="text-sm mt-1 opacity-90">{tip}</p>
             </div>
             <button
-              onClick={() => {
-                setShow(false);
-                setDismissed(true);
-                localStorage.setItem("tradesense_welcome_dismissed", "true");
-              }}
+              onClick={handleDismiss}
               className="text-white/70 hover:text-white text-xl leading-none"
             >
               ×
