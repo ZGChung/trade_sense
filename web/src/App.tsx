@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
+import { usePracticeHistory } from "./hooks/usePracticeHistory";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
@@ -9,6 +10,7 @@ import { StatsView } from "./components/StatsView";
 import { ModeSelector, ModeBadge } from "./components/ModeSelector";
 import { AchievementBadge, AchievementToast } from "./components/AchievementBadge";
 import { AchievementPanel } from "./components/AchievementPanel";
+import { HistoryPanel } from "./components/HistoryPanel";
 import { StockFilter } from "./components/StockFilter";
 import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
@@ -16,6 +18,7 @@ function App() {
   const session = useTradingSession();
   const [showStats, setShowStats] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('tradesense_darkmode');
     if (saved !== null) return saved === 'true';
@@ -42,6 +45,31 @@ function App() {
     session.maxStreak,
     session.challengeScore
   );
+  
+  const practiceHistory = usePracticeHistory();
+
+  // Track previous state to detect when a practice is completed
+  const [prevShowResult, setPrevShowResult] = useState(false);
+  const [prevTotalAttempts, setPrevTotalAttempts] = useState(0);
+
+  // Save practice record when a question is completed
+  useEffect(() => {
+    // When user moves from result view back to prediction (next question)
+    if (prevShowResult && !session.showResult && session.totalAttempts > 0) {
+      // Save record for casual mode only
+      if (session.practiceMode === 'casual') {
+        practiceHistory.addRecord({
+          mode: 'casual',
+          totalQuestions: 1,
+          correctAnswers: prevTotalAttempts < session.totalAttempts ? 1 : 0,
+          accuracy: prevTotalAttempts < session.totalAttempts ? 100 : 0,
+          maxStreak: session.currentStreak,
+        });
+      }
+    }
+    setPrevShowResult(session.showResult);
+    setPrevTotalAttempts(session.totalAttempts);
+  }, [session.showResult, session.totalAttempts, session.practiceMode, session.currentStreak, practiceHistory, prevShowResult, prevTotalAttempts]);
   
   // Check achievements after each prediction
   useEffect(() => {
@@ -91,6 +119,9 @@ function App() {
       } else if (e.key === "o" || e.key === "O") {
         e.preventDefault();
         setShowAchievements((prev) => !prev);
+      } else if (e.key === "l" || e.key === "L") {
+        e.preventDefault();
+        setShowHistory((prev) => !prev);
       } else if (e.key === "r" || e.key === "R") {
         e.preventDefault();
         session.resetSession();
@@ -138,6 +169,15 @@ function App() {
         )}
       </AnimatePresence>
       
+      {/* History Panel */}
+      <AnimatePresence>
+        {showHistory && (
+          <HistoryPanel
+            onClose={() => setShowHistory(false)}
+          />
+        )}
+      </AnimatePresence>
+      
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6 pt-4">
@@ -160,7 +200,7 @@ function App() {
             训练你的交易直觉
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | O成就 | R重置
+            快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | O成就 | L历史 | R重置
           </p>
           
           {/* Challenge Mode Score */}
