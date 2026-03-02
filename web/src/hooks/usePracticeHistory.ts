@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 export interface PracticeRecord {
   id: string;
@@ -13,20 +13,18 @@ export interface PracticeRecord {
 
 const STORAGE_KEY = 'tradesense_history';
 
-export function usePracticeHistory() {
-  const [history, setHistory] = useState<PracticeRecord[]>([]);
-
-  // Load history from localStorage
-  useEffect(() => {
+const loadHistory = (): PracticeRecord[] => {
+  try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse history:', e);
-      }
-    }
-  }, []);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.error('Failed to parse history:', e);
+    return [];
+  }
+};
+
+export function usePracticeHistory() {
+  const [history, setHistory] = useState<PracticeRecord[]>(loadHistory);
 
   // Save to localStorage
   const saveHistory = useCallback((newHistory: PracticeRecord[]) => {
