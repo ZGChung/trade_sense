@@ -13,6 +13,7 @@ import { AchievementPanel } from "./components/AchievementPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { StockFilter } from "./components/StockFilter";
 import { WelcomeBanner } from "./components/WelcomeBanner";
+import { Footer } from "./components/Footer";
 import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
 
 function App() {
@@ -337,6 +338,9 @@ function App() {
 
         {/* Spacer for fixed bottom bar */}
         <div className="h-16"></div>
+        
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   );
