@@ -6,6 +6,8 @@ export default defineConfig({
   base: '/',
   build: {
     target: 'es2015',
+    minify: 'esbuild',
+    sourcemap: false,
   },
   plugins: [
     react(),
