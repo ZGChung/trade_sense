@@ -7,10 +7,24 @@
     <meta name="description" content="训练你的金融交易直觉 - 通过历史新闻事件预测股票走势" />
     <meta name="theme-color" content="#3b82f6" />
     <title>TradeSense - 交易直觉训练</title>
+    <style>
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      #root:empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      #root:empty::after {
+        content: "📈 加载中...";
+        color: white;
+        font-size: 24px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-<!-- deployed Mon Mar  2 21:59:33 CST 2026 -->
