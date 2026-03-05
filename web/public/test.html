@@ -1,1 +1,14 @@
-<h1>Test Page</h1><p>If you see this, the page loads!</p>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TradeSense - 测试</title>
+  </head>
+  <body style="font-family: -apple-system, sans-serif; padding: 40px; text-align: center;">
+    <h1 style="color: #3b82f6;">📈 TradeSense</h1>
+    <p>如果看到这个，说明HTML能正常显示</p>
+    <p>时间: <span id="time"></span></p>
+    <script>document.getElementById('time').textContent = new Date().toLocaleTimeString();</script>
+  </body>
+</html>
