@@ -12,7 +12,8 @@ try {
     createRoot(root).render(<App />);
     console.log('TradeSense: Rendered successfully');
   }
-} catch (e: any) {
+} catch (e: unknown) {
   console.error('TradeSense Error:', e);
-  document.body.innerHTML = '<div style="padding:20px;color:red;">Error: ' + e.message + '</div>';
+  const message = e instanceof Error ? e.message : String(e);
+  document.body.innerHTML = '<div style="padding:20px;color:red;">Error: ' + message + '</div>';
 }
