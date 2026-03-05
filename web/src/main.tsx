@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 
 // Simple test - just render some text
-const TestApp = () => {
+function TestApp() {
   return (
     <div style={{ padding: '20px', textAlign: 'center' }}>
       <h1>TradeSense Loading...</h1>
@@ -11,6 +11,8 @@ const TestApp = () => {
     </div>
   )
 }
+
+export default TestApp
 
 // Global error handler for debugging
 window.onerror = function(message, source, lineno, colno, error) {
