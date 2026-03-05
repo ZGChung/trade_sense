@@ -1,7 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+
+// Simple test - just render some text
+const TestApp = () => {
+  return (
+    <div style={{ padding: '20px', textAlign: 'center' }}>
+      <h1>TradeSense Loading...</h1>
+      <p>If you see this, React is working!</p>
+    </div>
+  )
+}
 
 // Global error handler for debugging
 window.onerror = function(message, source, lineno, colno, error) {
@@ -16,7 +25,7 @@ const root = document.getElementById('root');
 if (root) {
   createRoot(root).render(
     <StrictMode>
-      <App />
+      <TestApp />
     </StrictMode>,
   );
 } else {
