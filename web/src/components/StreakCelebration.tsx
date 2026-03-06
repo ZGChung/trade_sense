@@ -26,6 +26,7 @@ export function StreakCelebration({ streak }: StreakCelebrationProps) {
 
   useEffect(() => {
     if (MILESTONES.includes(streak)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMilestone(streak);
       setShow(true);
       const timer = setTimeout(() => setShow(false), 2500);

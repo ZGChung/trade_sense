@@ -4,7 +4,10 @@ export function useCountdown(durationSeconds: number, onExpire?: () => void) {
   const [secondsLeft, setSecondsLeft] = useState(durationSeconds);
   const [isRunning, setIsRunning] = useState(false);
   const onExpireRef = useRef(onExpire);
-  onExpireRef.current = onExpire;
+
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   const isExpired = secondsLeft <= 0 && !isRunning;
 
