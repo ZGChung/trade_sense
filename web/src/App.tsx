@@ -197,7 +197,7 @@ function App() {
           {/* Theme Toggle */}
           <button
             onClick={toggleDarkMode}
-            className="fixed top-16 left-4 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors z-40"
+            className="fixed top-4 left-4 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors z-40"
             title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
           >
             {darkMode ? "☀️" : "🌙"}
