@@ -17,7 +17,11 @@ import { StockFilter } from "./components/StockFilter";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { Footer } from "./components/Footer";
 import { StreakCelebration } from "./components/StreakCelebration";
+import { CountdownBar } from "./components/CountdownBar";
+import { useCountdown } from "./hooks/useCountdown";
 import { PredictionOption as PredictionOptionValues, PredictionOption, getPerformanceCategory } from "./models/types";
+
+const CHALLENGE_TIMER_SECONDS = 15;
 
 function App() {
   const session = useTradingSession();
@@ -43,6 +47,23 @@ function App() {
   const toggleDarkMode = useCallback(() => {
     setDarkMode(prev => !prev);
   }, []);
+
+  const countdown = useCountdown(CHALLENGE_TIMER_SECONDS, () => {
+    if (session.practiceMode === 'challenge' && !session.showResult) {
+      session.makePrediction(PredictionOptionValues.FLAT);
+    }
+  });
+
+  // Start/reset timer based on mode and question state
+  useEffect(() => {
+    if (session.practiceMode === 'challenge' && !session.showResult) {
+      countdown.reset();
+      countdown.start();
+    } else {
+      countdown.pause();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.practiceMode, session.showResult, session.currentEventGroup.id]);
   
   const achievements = useAchievements(
     session.totalAttempts,
@@ -312,6 +333,15 @@ function App() {
 
           {!session.showResult ? (
             <>
+              {/* Challenge Timer */}
+              {session.practiceMode === 'challenge' && (
+                <CountdownBar
+                  secondsLeft={countdown.secondsLeft}
+                  progress={countdown.progress}
+                  isRunning={countdown.isRunning}
+                />
+              )}
+
               {/* Prediction Prompt */}
               <div className="text-center px-5 py-4">
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
