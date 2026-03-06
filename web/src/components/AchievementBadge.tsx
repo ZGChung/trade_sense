@@ -46,7 +46,7 @@ export function AchievementBadge({ count, total, onClick }: AchievementBadgeProp
   return (
     <button
       onClick={onClick}
-      className="fixed top-4 right-16 z-40 bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md"
+      className="fixed top-4 right-4 z-40 bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md"
     >
       <span className="text-lg">🏅</span>
       <span className="font-semibold text-sm">
