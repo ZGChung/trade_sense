@@ -8,9 +8,10 @@ interface WrongAnswersPanelProps {
   wrongAnswers: WrongAnswer[];
   onRemove: (id: string) => void;
   onClearAll: () => void;
+  onPractice?: (answer: WrongAnswer) => void;
 }
 
-export function WrongAnswersPanel({ isOpen, onClose, wrongAnswers, onRemove, onClearAll }: WrongAnswersPanelProps) {
+export function WrongAnswersPanel({ isOpen, onClose, wrongAnswers, onRemove, onClearAll, onPractice }: WrongAnswersPanelProps) {
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("zh-CN", {
       month: "short",
@@ -87,12 +88,22 @@ export function WrongAnswersPanel({ isOpen, onClose, wrongAnswers, onRemove, onC
                           {answer.stockName}
                         </span>
                       </div>
-                      <button
-                        onClick={() => onRemove(answer.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors text-sm"
-                      >
-                        删除
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onPractice && (
+                          <button
+                            onClick={() => onPractice(answer)}
+                            className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors text-sm font-medium"
+                          >
+                            重练
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onRemove(answer.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors text-sm"
+                        >
+                          删除
+                        </button>
+                      </div>
                     </div>
 
                     {/* Event description */}

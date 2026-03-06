@@ -16,6 +16,7 @@ import { WrongAnswersPanel } from "./components/WrongAnswersPanel";
 import { StockFilter } from "./components/StockFilter";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { Footer } from "./components/Footer";
+import { StreakCelebration } from "./components/StreakCelebration";
 import { PredictionOption as PredictionOptionValues, PredictionOption, getPerformanceCategory } from "./models/types";
 
 function App() {
@@ -79,6 +80,23 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.showResult, session.practiceMode, session.currentStreak]);
   
+  // Track wrong answers when result is shown
+  useEffect(() => {
+    if (session.showResult && session.userPrediction && finalEvent) {
+      const correctAnswer = getPerformanceCategory(finalEvent.actualPerformance);
+      if (session.userPrediction !== correctAnswer) {
+        wrongAnswers.addWrongAnswer({
+          eventGroup: session.currentEventGroup,
+          userPrediction: session.userPrediction,
+          correctAnswer,
+          stockSymbol: session.currentEventGroup.stockSymbol,
+          stockName: session.currentEventGroup.stockName,
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.showResult]);
+
   // Check achievements after each prediction
   useEffect(() => {
     if (session.totalAttempts > 0) {
@@ -164,6 +182,9 @@ function App() {
       <div className="container mx-auto px-4 pt-14 max-w-2xl">
         <WelcomeBanner />
       </div>
+      
+      {/* Streak Celebration */}
+      <StreakCelebration streak={session.currentStreak} />
       
       {/* Achievement Toast */}
       <AchievementToast 
@@ -312,7 +333,6 @@ function App() {
               </div>
             </>
           ) : session.userPrediction ? (
-            <>
               <ResultView
                 eventGroup={session.currentEventGroup}
                 event={finalEvent}
@@ -321,21 +341,6 @@ function App() {
                 totalAttempts={session.totalAttempts}
                 correctPredictions={session.correctPredictions}
               />
-              {/* Track wrong answers */}
-              {(() => {
-                const correctAnswer = getPerformanceCategory(finalEvent.actualPerformance);
-                if (session.userPrediction !== correctAnswer) {
-                  wrongAnswers.addWrongAnswer({
-                    eventGroup: session.currentEventGroup,
-                    userPrediction: session.userPrediction,
-                    correctAnswer,
-                    stockSymbol: session.currentEventGroup.stockSymbol,
-                    stockName: session.currentEventGroup.stockName,
-                  });
-                }
-                return null;
-              })()}
-            </>
           ) : null}
         </div>
 
@@ -381,6 +386,10 @@ function App() {
           wrongAnswers={wrongAnswers.wrongAnswers}
           onRemove={wrongAnswers.removeWrongAnswer}
           onClearAll={wrongAnswers.clearWrongAnswers}
+          onPractice={(answer) => {
+            session.practiceEventGroup(answer.eventGroup);
+            setShowWrongAnswers(false);
+          }}
         />
 
         {/* Spacer for fixed bottom bar */}

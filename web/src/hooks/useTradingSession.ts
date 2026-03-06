@@ -301,6 +301,19 @@ export function useTradingSession() {
     }));
   }, [getRandomEvent, selectedCategory]);
 
+  const practiceEventGroup = useCallback((eventGroup: EventGroup) => {
+    if (practiceMode !== "casual") {
+      setPracticeMode("casual");
+    }
+    setState((prev) => ({
+      ...prev,
+      currentEventGroup: eventGroup,
+      currentEventIndex: 0,
+      userPrediction: null,
+      showResult: false,
+    }));
+  }, [practiceMode]);
+
   return {
     ...state,
     totalEvents: practiceMode === "daily" ? dailyEvents.length : state.currentEventGroup.events.length,
@@ -309,6 +322,7 @@ export function useTradingSession() {
     makePrediction,
     nextEvent,
     resetSession,
+    practiceEventGroup,
     practiceMode,
     changeMode,
     changeCategory,
