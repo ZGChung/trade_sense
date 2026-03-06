@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
 import { usePracticeHistory } from "./hooks/usePracticeHistory";
+import { useWrongAnswers } from "./hooks/useWrongAnswers";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
@@ -11,10 +12,11 @@ import { ModeSelector, ModeBadge } from "./components/ModeSelector";
 import { AchievementBadge, AchievementToast } from "./components/AchievementBadge";
 import { AchievementPanel } from "./components/AchievementPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { WrongAnswersPanel } from "./components/WrongAnswersPanel";
 import { StockFilter } from "./components/StockFilter";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { Footer } from "./components/Footer";
-import { PredictionOption as PredictionOptionValues, PredictionOption } from "./models/types";
+import { PredictionOption as PredictionOptionValues, PredictionOption, getPerformanceCategory } from "./models/types";
 
 function App() {
   const session = useTradingSession();
@@ -49,6 +51,8 @@ function App() {
   );
   
   const practiceHistory = usePracticeHistory();
+  const wrongAnswers = useWrongAnswers();
+  const [showWrongAnswers, setShowWrongAnswers] = useState(false);
 
   // Track previous state to detect when a practice is completed
   const [prevShowResult, setPrevShowResult] = useState(false);
@@ -308,14 +312,30 @@ function App() {
               </div>
             </>
           ) : session.userPrediction ? (
-            <ResultView
-              eventGroup={session.currentEventGroup}
-              event={finalEvent}
-              userPrediction={session.userPrediction}
-              onContinue={session.nextEvent}
-              totalAttempts={session.totalAttempts}
-              correctPredictions={session.correctPredictions}
-            />
+            <>
+              <ResultView
+                eventGroup={session.currentEventGroup}
+                event={finalEvent}
+                userPrediction={session.userPrediction}
+                onContinue={session.nextEvent}
+                totalAttempts={session.totalAttempts}
+                correctPredictions={session.correctPredictions}
+              />
+              {/* Track wrong answers */}
+              {(() => {
+                const correctAnswer = getPerformanceCategory(finalEvent.actualPerformance);
+                if (session.userPrediction !== correctAnswer) {
+                  wrongAnswers.addWrongAnswer({
+                    eventGroup: session.currentEventGroup,
+                    userPrediction: session.userPrediction,
+                    correctAnswer,
+                    stockSymbol: session.currentEventGroup.stockSymbol,
+                    stockName: session.currentEventGroup.stockName,
+                  });
+                }
+                return null;
+              })()}
+            </>
           ) : null}
         </div>
 
@@ -329,12 +349,32 @@ function App() {
             {showStats ? "▲" : "📊"}
           </button>
           <button
+            onClick={() => setShowWrongAnswers(true)}
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
+            aria-label="Wrong answers"
+          >
+            📝 {wrongAnswers.getWrongAnswersCount() > 0 && (
+              <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">
+                {wrongAnswers.getWrongAnswersCount()}
+              </span>
+            )}
+          </button>
+          <button
             onClick={session.resetSession}
             className="px-4 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
           >
             重置
           </button>
         </div>
+
+        {/* Wrong Answers Panel */}
+        <WrongAnswersPanel
+          isOpen={showWrongAnswers}
+          onClose={() => setShowWrongAnswers(false)}
+          wrongAnswers={wrongAnswers.wrongAnswers}
+          onRemove={wrongAnswers.removeWrongAnswer}
+          onClearAll={wrongAnswers.clearWrongAnswers}
+        />
 
         {/* Spacer for fixed bottom bar */}
         <div className="h-16"></div>
