@@ -260,7 +260,7 @@ export const mockData: EventGroup[] = [
       },
       {
         id: generateId(),
-        description: "Meta宣布",
+        description: "Meta宣布大规模裁员约1.1万人",
         date: "2022-11-09",
         stockSymbol: "META",
         stockName: "Meta",
@@ -1876,20 +1876,6 @@ export const mockData: EventGroup[] = [
       },
     ],
   },
-  {
-    id: generateId(),
-    stockSymbol: "undefined",
-    stockName: "undefined",
-    events: [
-    ],
-  },
-  {
-    id: generateId(),
-    stockSymbol: "undefined",
-    stockName: "undefined",
-    events: [
-    ],
-  },
 ];
 
 export function getRandomEventGroup(): EventGroup {
@@ -1920,6 +1906,3 @@ export function getStockCategory(stockSymbol: string): StockCategory {
   return STOCK_CATEGORIES[stockSymbol] || "其他";
 }
 
-export function getAllCategories(): StockCategory[] {
-  return Object.values(StockCategory);
-}

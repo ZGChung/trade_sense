@@ -217,27 +217,27 @@ export function useTradingSession() {
   }, [practiceMode, dailyEvents, dailyEventIndex]);
 
   const nextEvent = useCallback(() => {
+    let nextDailyIndex = dailyEventIndex;
     if (practiceMode === "daily") {
-      // Move to next daily event
       if (dailyEventIndex < dailyEvents.length - 1) {
-        setDailyEventIndex((prev) => prev + 1);
+        nextDailyIndex = dailyEventIndex + 1;
       } else {
-        // Daily challenge completed - reset to first event
-        setDailyEventIndex(0);
+        nextDailyIndex = 0;
         setDailyScore(0);
       }
+      setDailyEventIndex(nextDailyIndex);
     }
     
     setState((prev) => ({
       ...prev,
       currentEventGroup: practiceMode === "daily" 
-        ? dailyEvents[dailyEventIndex] 
-        : getRandomEvent(selectedCategory),
+        ? dailyEvents[nextDailyIndex] 
+        : getRandomEvent(selectedCategory, searchQuery),
       currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
     }));
-  }, [practiceMode, dailyEvents, dailyEventIndex, getRandomEvent, selectedCategory]);
+  }, [practiceMode, dailyEvents, dailyEventIndex, getRandomEvent, selectedCategory, searchQuery]);
 
   const resetSession = useCallback(() => {
     const newStats = {

@@ -349,6 +349,13 @@ function App() {
             {showStats ? "▲" : "📊"}
           </button>
           <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            aria-label="History"
+          >
+            📜
+          </button>
+          <button
             onClick={() => setShowWrongAnswers(true)}
             className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
             aria-label="Wrong answers"

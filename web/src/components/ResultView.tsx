@@ -4,7 +4,6 @@ import type { EventGroup, HistoricalEvent, PredictionOption } from "../models/ty
 import { getFormattedPerformance, getPerformanceCategory } from "../models/types";
 import { PredictionOptionEmoji } from "../models/types";
 import { deepSeekService } from "../services/deepSeekService";
-import { playSound, vibrate } from "../utils/sound";
 
 interface ResultViewProps {
   eventGroup: EventGroup;
@@ -36,14 +35,6 @@ export function ResultView({
 
   useEffect(() => {
     loadAIExplanation();
-    // Play sound and vibrate on result shown
-    if (isCorrect) {
-      playSound('correct');
-      vibrate('success');
-    } else {
-      playSound('wrong');
-      vibrate('medium');
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventGroup.id, event.id, userPrediction]);
 
