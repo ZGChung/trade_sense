@@ -26,7 +26,7 @@ function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('tradesense_darkmode');
     if (saved !== null) return saved === 'true';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false; // Default to light mode
   });
 
   // Apply dark mode class
