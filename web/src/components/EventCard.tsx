@@ -1,11 +1,15 @@
 import { motion } from "framer-motion";
 import type { EventGroup } from "../models/types";
+import { getDifficulty, getDifficultyLabel, getDifficultyColor } from "../models/difficulty";
 
 interface EventCardProps {
   eventGroup: EventGroup;
 }
 
 export function EventCard({ eventGroup }: EventCardProps) {
+  const lastEvent = eventGroup.events.at(-1);
+  const difficulty = lastEvent ? getDifficulty(lastEvent.actualPerformance) : 'medium';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -17,9 +21,14 @@ export function EventCard({ eventGroup }: EventCardProps) {
         <h2 className="text-2xl font-bold">
           {eventGroup.stockName} ({eventGroup.stockSymbol})
         </h2>
-        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-          {eventGroup.events.length} 个事件
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs px-2 py-1 rounded-full font-medium ${getDifficultyColor(difficulty)}`}>
+            {getDifficultyLabel(difficulty)}
+          </span>
+          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
+            {eventGroup.events.length} 个事件
+          </span>
+        </div>
       </div>
       <div className="space-y-3">
         {eventGroup.events.map((event, index) => (
