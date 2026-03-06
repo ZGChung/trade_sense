@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-console.log('TradeSense: Starting...');
+console.log('TradeSense: Starting...'); // v1.1.0
 
 try {
   const root = document.getElementById('root');
