@@ -32,36 +32,21 @@ export interface NormalizedNews {
   sourceUrl: string;
 }
 
-async function fetchNews(): Promise<NormalizedNews[]> {
-  const apiKey = getEnv("STOCKDATA_API_KEY");
-  const days = Number(process.env.PIPELINE_LOOKBACK_DAYS ?? "7");
-  const limit = Number(process.env.PIPELINE_NEWS_LIMIT ?? "100");
-
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(endDate.getDate() - days);
-
-  const endpoint = new URL("https://api.stockdata.org/v1/news/all");
-  endpoint.searchParams.set("api_token", apiKey);
-  endpoint.searchParams.set("language", "en");
-  endpoint.searchParams.set("must_have_entities", "true");
-  endpoint.searchParams.set("published_after", `${formatDate(startDate)}T00:00:00`);
-  endpoint.searchParams.set("published_before", `${formatDate(endDate)}T23:59:59`);
-  endpoint.searchParams.set("countries", process.env.PIPELINE_NEWS_COUNTRIES ?? "us");
-  endpoint.searchParams.set("limit", String(limit));
-
-  const response = await fetch(endpoint);
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`StockData news API failed (${response.status}): ${errorText}`);
+function toPositiveInt(input: string | undefined, fallback: number): number {
+  const parsed = Number(input ?? "");
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
   }
+  return Math.floor(parsed);
+}
 
-  const payload = (await response.json()) as StockDataNewsResponse;
-  if (payload.error?.message) {
-    throw new Error(`StockData news API error: ${payload.error.message}`);
-  }
+function isQuotaError(code?: string, message?: string): boolean {
+  const haystack = `${code ?? ""} ${message ?? ""}`.toLowerCase();
+  return haystack.includes("limit") || haystack.includes("quota") || haystack.includes("too many");
+}
 
-  const normalized = (payload.data ?? [])
+function normalizeBatch(items: StockDataNewsItem[]): NormalizedNews[] {
+  return items
     .flatMap((item) => {
       const entities = (item.entities ?? []).filter((entity) => {
         const hasSymbol = typeof entity.symbol === "string" && entity.symbol.trim().length > 0;
@@ -91,21 +76,88 @@ async function fetchNews(): Promise<NormalizedNews[]> {
       }));
     })
     .filter((item) => Boolean(item.symbol));
+}
+
+async function fetchNews(): Promise<{ rows: NormalizedNews[]; requestsUsed: number }> {
+  const apiKey = getEnv("STOCKDATA_API_KEY");
+  const days = toPositiveInt(process.env.PIPELINE_LOOKBACK_DAYS, 7);
+  const pageLimit = Math.min(100, toPositiveInt(process.env.PIPELINE_NEWS_LIMIT, 100));
+  const requestBudget = toPositiveInt(process.env.PIPELINE_NEWS_REQUEST_BUDGET, 20);
+
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - days);
 
   const unique = new Map<string, NormalizedNews>();
-  for (const item of normalized) {
-    unique.set(`${item.uuid}:${item.symbol}`, item);
+  let requestsUsed = 0;
+
+  for (let page = 1; page <= requestBudget; page += 1) {
+    const endpoint = new URL("https://api.stockdata.org/v1/news/all");
+    endpoint.searchParams.set("api_token", apiKey);
+    endpoint.searchParams.set("language", "en");
+    endpoint.searchParams.set("must_have_entities", "true");
+    endpoint.searchParams.set("published_after", `${formatDate(startDate)}T00:00:00`);
+    endpoint.searchParams.set("published_before", `${formatDate(endDate)}T23:59:59`);
+    endpoint.searchParams.set("countries", process.env.PIPELINE_NEWS_COUNTRIES ?? "us");
+    endpoint.searchParams.set("limit", String(pageLimit));
+    endpoint.searchParams.set("page", String(page));
+
+    const response = await fetch(endpoint);
+    requestsUsed += 1;
+
+    if (response.status === 429) {
+      console.warn(`StockData news quota reached at page ${page}.`);
+      break;
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`StockData news API failed (${response.status}): ${errorText}`);
+    }
+
+    const payload = (await response.json()) as StockDataNewsResponse;
+    if (payload.error?.message) {
+      if (isQuotaError(payload.error.code, payload.error.message)) {
+        console.warn(`StockData news quota reached: ${payload.error.message}`);
+        break;
+      }
+      throw new Error(`StockData news API error: ${payload.error.message}`);
+    }
+
+    const batch = normalizeBatch(payload.data ?? []);
+    if (batch.length === 0) {
+      break;
+    }
+
+    let addedCount = 0;
+    for (const item of batch) {
+      const key = `${item.uuid}:${item.symbol}`;
+      if (!unique.has(key)) {
+        unique.set(key, item);
+        addedCount += 1;
+      }
+    }
+
+    // When pagination is unsupported and we keep seeing the same page, stop early.
+    if (addedCount === 0) {
+      break;
+    }
   }
 
-  return Array.from(unique.values());
+  return {
+    rows: Array.from(unique.values()),
+    requestsUsed,
+  };
 }
 
 async function main() {
-  const news = await fetchNews();
-  await writeJson("news.json", news);
+  const { rows, requestsUsed } = await fetchNews();
+  await writeJson("news.json", rows);
 
-  const symbols = new Set(news.map((item) => item.symbol));
-  console.log(`Fetched ${news.length} news records across ${symbols.size} symbols.`);
+  const symbols = new Set(rows.map((item) => item.symbol));
+  console.log(
+    `Fetched ${rows.length} news records across ${symbols.size} symbols using ${requestsUsed} StockData requests.`
+  );
 }
 
 main().catch((error) => {

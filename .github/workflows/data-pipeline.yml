@@ -2,13 +2,13 @@ name: Data Pipeline
 
 on:
   schedule:
-    - cron: "0 0 * * 0"   # Weekly pipeline: Sunday 00:00 UTC
+    - cron: "10 0 * * *"  # Daily quota refresh run: 00:10 UTC
     - cron: "0 12 * * *"  # Daily keep-alive: 12:00 UTC
   workflow_dispatch:
 
 jobs:
-  weekly-pipeline:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 0 * * 0'
+  quota-harvest-pipeline:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '10 0 * * *'
     runs-on: ubuntu-latest
 
     steps:
@@ -34,12 +34,14 @@ jobs:
           [ -n "$SUPABASE_URL" ] || { echo "Missing secret: SUPABASE_URL"; exit 1; }
           [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || { echo "Missing secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
 
-      - name: Run weekly data pipeline
+      - name: Run daily quota-harvest pipeline
         working-directory: pipeline
         env:
           STOCKDATA_API_KEY: ${{ secrets.STOCKDATA_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PIPELINE_NEWS_REQUEST_BUDGET: "20"
+          PIPELINE_PRICE_REQUEST_BUDGET: "80"
         run: npm run run
 
   keep-alive:

@@ -62,12 +62,10 @@ export function AchievementBadge({ count, total, onClick, className = "" }: Achi
   return (
     <button
       onClick={onClick}
-      className={`bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white/95 px-3 py-2 text-sm font-semibold text-gray-700 shadow-md transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-800 ${className}`}
     >
-      <span className="text-lg">🏅</span>
-      <span className="font-semibold text-sm">
-        {count}/{total}
-      </span>
+      <span>🏅</span>
+      <span>成就 {count}/{total}</span>
     </button>
   );
 }

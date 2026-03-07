@@ -191,14 +191,45 @@ create table if not exists leaderboard_scores (
   display_name text not null,
   mode text not null check (mode in ('challenge', 'daily')),
   score int not null check (score >= 0),
+  total_questions int not null default 0 check (total_questions >= 0),
+  correct_answers int not null default 0 check (correct_answers >= 0),
+  total_time_ms int not null default 0 check (total_time_ms >= 0),
+  hearts_left int check (hearts_left between 0 and 3),
+  run_status text check (run_status in ('completed', 'failed', 'quit')),
   score_date date not null default current_date,
   created_at timestamptz not null default now()
 );
+
+-- Backward compatible upgrades for existing projects.
+alter table if exists leaderboard_scores
+  add column if not exists total_questions int not null default 0;
+alter table if exists leaderboard_scores
+  add column if not exists correct_answers int not null default 0;
+alter table if exists leaderboard_scores
+  add column if not exists total_time_ms int not null default 0;
+alter table if exists leaderboard_scores
+  add column if not exists hearts_left int;
+alter table if exists leaderboard_scores
+  add column if not exists run_status text;
+alter table if exists leaderboard_scores
+  drop constraint if exists leaderboard_scores_hearts_left_check;
+alter table if exists leaderboard_scores
+  add constraint leaderboard_scores_hearts_left_check
+  check (hearts_left is null or hearts_left between 0 and 3);
+alter table if exists leaderboard_scores
+  drop constraint if exists leaderboard_scores_run_status_check;
+alter table if exists leaderboard_scores
+  add constraint leaderboard_scores_run_status_check
+  check (run_status is null or run_status in ('completed', 'failed', 'quit'));
 
 create index if not exists idx_leaderboard_scores_mode_date_score
   on leaderboard_scores(mode, score_date, score desc, created_at asc);
 create index if not exists idx_leaderboard_scores_mode_score
   on leaderboard_scores(mode, score desc, created_at asc);
+create index if not exists idx_leaderboard_scores_daily_rank
+  on leaderboard_scores(mode, score_date, correct_answers desc, total_questions desc, total_time_ms asc, created_at asc);
+create index if not exists idx_leaderboard_scores_challenge_rank
+  on leaderboard_scores(mode, score desc, hearts_left desc, total_time_ms asc, created_at asc);
 
 alter table anonymous_users enable row level security;
 alter table practice_attempts enable row level security;

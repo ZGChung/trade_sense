@@ -6,15 +6,13 @@ import type {
   EventGroup,
   StockCategory,
 } from "../models/types";
-import { getPerformanceCategory } from "../models/types";
+import { PredictionOption as PredictionOptionValues, getPerformanceCategory } from "../models/types";
 import { mockData } from "../models/mockData";
 import type { PracticeMode } from "../components/ModeSelector";
 import { playSound, vibrate } from "../utils/sound";
 import {
   getDailyChallenge,
   getDailyChallengeInfo,
-  saveDailyHighScore,
-  getDailyHighScore,
 } from "../services/dailyChallenge";
 import { eventService } from "../services/eventService";
 import type { UserStats } from "../services/userService";
@@ -24,12 +22,27 @@ import { trackLeaderboardScore, trackPracticeAttempt } from "../services/analyti
 const STORAGE_KEY = "tradesense_stats";
 const MODE_STORAGE_KEY = "tradesense_mode";
 const CHALLENGE_BEST_SCORE_KEY = "tradesense_challenge_best_score";
+const CHALLENGE_MAX_STRIKES = 3;
+const CHALLENGE_TIMEOUT_MS = 10_000;
 
 interface StoredStats {
   totalAttempts: number;
   correctPredictions: number;
   currentStreak: number;
   maxStreak: number;
+}
+
+interface PredictionActionOptions {
+  forceIncorrect?: boolean;
+  responseTimeMs?: number;
+}
+
+interface CompletedChallengeRun {
+  score: number;
+  heartsLeft: number;
+  totalTimeMs: number;
+  totalQuestions: number;
+  runStatus: "failed" | "quit";
 }
 
 function loadStoredMode(): PracticeMode {
@@ -126,12 +139,16 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
   const [challengeScore, setChallengeScore] = useState(0);
   const [challengeCurrentScore, setChallengeCurrentScore] = useState(0);
   const [challengeBestScore, setChallengeBestScore] = useState(loadChallengeBestScore);
+  const [challengeStrikes, setChallengeStrikes] = useState(0);
+  const [challengeRunTotalTimeMs, setChallengeRunTotalTimeMs] = useState(0);
+  const [challengeRunEnded, setChallengeRunEnded] = useState(false);
 
   const [dailyDate, setDailyDate] = useState(() => getDailyChallengeInfo().date);
   const [dailyScore, setDailyScore] = useState(0);
-  const [dailyHighScore, setDailyHighScore] = useState(getDailyHighScore());
   const [dailyEvents, setDailyEvents] = useState<EventGroup[]>(getDailyChallenge());
   const [dailyEventIndex, setDailyEventIndex] = useState(0);
+  const [dailyAnsweredCount, setDailyAnsweredCount] = useState(0);
+  const [dailyTotalTimeMs, setDailyTotalTimeMs] = useState(0);
 
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventLoadError, setEventLoadError] = useState<string | null>(null);
@@ -185,6 +202,10 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
         if (resetToFirst) {
           setDailyEventIndex(0);
+          setDailyScore(0);
+          setDailyAnsweredCount(0);
+          setDailyTotalTimeMs(0);
+
           if (practiceMode === "daily" && nextDailyEvents[0]) {
             setState((prev) => ({
               ...prev,
@@ -202,6 +223,9 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
         if (resetToFirst && practiceMode === "daily" && fallbackEvents[0]) {
           setDailyEventIndex(0);
+          setDailyScore(0);
+          setDailyAnsweredCount(0);
+          setDailyTotalTimeMs(0);
           setState((prev) => ({
             ...prev,
             currentEventGroup: fallbackEvents[0],
@@ -254,7 +278,8 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
     if (info.date !== dailyDate || info.isNewDay) {
       setDailyDate(info.date);
       setDailyScore(0);
-      setDailyHighScore(getDailyHighScore());
+      setDailyAnsweredCount(0);
+      setDailyTotalTimeMs(0);
       void refreshDailyEvents(info.date, true);
     }
   }, [dailyDate, refreshDailyEvents]);
@@ -342,13 +367,33 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
   const formattedAccuracy = `${accuracy.toFixed(1)}%`;
 
+  const submitChallengeRun = useCallback(
+    async (run: CompletedChallengeRun) => {
+      await trackLeaderboardScore(user ?? null, {
+        mode: "challenge",
+        score: run.score,
+        scoreDate: dailyDate,
+        totalQuestions: run.totalQuestions,
+        correctAnswers: run.score,
+        totalTimeMs: run.totalTimeMs,
+        heartsLeft: run.heartsLeft,
+        runStatus: run.runStatus,
+      });
+      setLeaderboardRefreshKey((prev) => prev + 1);
+    },
+    [dailyDate, user]
+  );
+
   const makePrediction = useCallback(
-    (prediction: PredictionOption) => {
-      const responseTimeMs = Math.max(0, Date.now() - questionPresentedAtRef.current);
+    (prediction: PredictionOption, options: PredictionActionOptions = {}) => {
+      const responseTimeMs = Math.max(
+        0,
+        Math.floor(options.responseTimeMs ?? Date.now() - questionPresentedAtRef.current)
+      );
 
       let shouldIncrementDailyScore = false;
       let practiceAttemptPayload: Parameters<typeof trackPracticeAttempt>[1] | null = null;
-      let finishedChallengeScore: number | null = null;
+      let completedChallengeRun: CompletedChallengeRun | null = null;
 
       setState((prev) => {
         const eventGroup =
@@ -362,7 +407,7 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
         const finalEvent = eventGroup.events[eventGroup.events.length - 1];
         const correctAnswer = getPerformanceCategory(finalEvent.actualPerformance);
-        const isCorrect = prediction === correctAnswer;
+        const isCorrect = options.forceIncorrect ? false : prediction === correctAnswer;
 
         let newCorrectPredictions = prev.correctPredictions;
         let newCurrentStreak = prev.currentStreak;
@@ -381,24 +426,45 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
         }
 
         if (practiceMode === "challenge") {
+          const nextRunTimeMs = challengeRunTotalTimeMs + responseTimeMs;
+          setChallengeRunTotalTimeMs(nextRunTimeMs);
+
           if (isCorrect) {
             setChallengeCurrentScore((score) => score + 1);
           } else {
-            finishedChallengeScore = challengeCurrentScore;
-            setChallengeScore(challengeCurrentScore);
-            setChallengeCurrentScore(0);
-            if (challengeCurrentScore > challengeBestScore) {
-              setChallengeBestScore(challengeCurrentScore);
-              saveChallengeBestScore(challengeCurrentScore);
+            const nextStrikes = Math.min(challengeStrikes + 1, CHALLENGE_MAX_STRIKES);
+            setChallengeStrikes(nextStrikes);
+
+            if (nextStrikes >= CHALLENGE_MAX_STRIKES) {
+              const finalScore = challengeCurrentScore;
+              completedChallengeRun = {
+                score: finalScore,
+                heartsLeft: 0,
+                totalTimeMs: nextRunTimeMs,
+                totalQuestions: Math.max(1, finalScore + CHALLENGE_MAX_STRIKES),
+                runStatus: "failed",
+              };
+
+              setChallengeScore(finalScore);
+              setChallengeRunEnded(true);
+
+              if (finalScore > challengeBestScore) {
+                setChallengeBestScore(finalScore);
+                saveChallengeBestScore(finalScore);
+              }
+
+              playSound("success");
+              vibrate("heavy");
             }
-            challengeRunIdRef.current = createChallengeRunId();
-            playSound("success");
-            vibrate("heavy");
           }
         }
 
-        if (practiceMode === "daily" && isCorrect) {
-          shouldIncrementDailyScore = true;
+        if (practiceMode === "daily") {
+          setDailyAnsweredCount((count) => count + 1);
+          setDailyTotalTimeMs((time) => time + responseTimeMs);
+          if (isCorrect) {
+            shouldIncrementDailyScore = true;
+          }
         }
 
         practiceAttemptPayload = {
@@ -427,26 +493,15 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
       });
 
       if (shouldIncrementDailyScore) {
-        setDailyScore((prev) => {
-          const newScore = prev + 1;
-          if (saveDailyHighScore(newScore)) {
-            setDailyHighScore(newScore);
-          }
-          return newScore;
-        });
+        setDailyScore((prev) => prev + 1);
       }
 
       if (practiceAttemptPayload) {
         void trackPracticeAttempt(user ?? null, practiceAttemptPayload);
       }
 
-      if (finishedChallengeScore !== null) {
-        void trackLeaderboardScore(user ?? null, {
-          mode: "challenge",
-          score: finishedChallengeScore,
-        }).then(() => {
-          setLeaderboardRefreshKey((prev) => prev + 1);
-        });
+      if (completedChallengeRun) {
+        void submitChallengeRun(completedChallengeRun);
       }
     },
     [
@@ -456,9 +511,23 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
       dailyDate,
       challengeCurrentScore,
       challengeBestScore,
+      challengeStrikes,
+      challengeRunTotalTimeMs,
       user,
+      submitChallengeRun,
     ]
   );
+
+  const registerChallengeTimeout = useCallback(() => {
+    if (practiceMode !== "challenge" || state.showResult) {
+      return;
+    }
+
+    makePrediction(PredictionOptionValues.FLAT, {
+      forceIncorrect: true,
+      responseTimeMs: CHALLENGE_TIMEOUT_MS,
+    });
+  }, [practiceMode, state.showResult, makePrediction]);
 
   const nextEvent = useCallback(() => {
     if (practiceMode === "daily") {
@@ -470,11 +539,17 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
       let nextIndex = dailyEventIndex + 1;
       if (nextIndex >= totalDailyEvents) {
         const completedDailyScore = dailyScore;
-        if (completedDailyScore >= 0) {
+        const completedQuestions = Math.max(dailyAnsweredCount, totalDailyEvents);
+        const completedTimeMs = Math.max(0, dailyTotalTimeMs);
+
+        if (completedQuestions > 0) {
           void trackLeaderboardScore(user ?? null, {
             mode: "daily",
             score: completedDailyScore,
             scoreDate: dailyDate,
+            totalQuestions: completedQuestions,
+            correctAnswers: completedDailyScore,
+            totalTimeMs: completedTimeMs,
           }).then(() => {
             setLeaderboardRefreshKey((prev) => prev + 1);
           });
@@ -482,6 +557,8 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
         nextIndex = 0;
         setDailyScore(0);
+        setDailyAnsweredCount(0);
+        setDailyTotalTimeMs(0);
       }
 
       const nextEventGroup = dailyEvents[nextIndex] ?? dailyEvents[0];
@@ -496,29 +573,46 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
       return;
     }
 
+    if (practiceMode === "challenge" && challengeRunEnded) {
+      setChallengeCurrentScore(0);
+      setChallengeStrikes(0);
+      setChallengeRunTotalTimeMs(0);
+      setChallengeRunEnded(false);
+      challengeRunIdRef.current = createChallengeRunId();
+    }
+
     setState((prev) => ({
       ...prev,
       userPrediction: null,
       showResult: false,
     }));
+
     void loadRandomEvent(selectedCategory, searchQuery);
   }, [
     practiceMode,
     dailyEvents,
     dailyEventIndex,
     dailyScore,
+    dailyAnsweredCount,
+    dailyTotalTimeMs,
     dailyDate,
     loadRandomEvent,
     selectedCategory,
     searchQuery,
+    challengeRunEnded,
     user,
   ]);
 
   const resetSession = useCallback(() => {
     setChallengeScore(0);
     setChallengeCurrentScore(0);
+    setChallengeStrikes(0);
+    setChallengeRunTotalTimeMs(0);
+    setChallengeRunEnded(false);
     setDailyEventIndex(0);
     setDailyScore(0);
+    setDailyAnsweredCount(0);
+    setDailyTotalTimeMs(0);
     challengeRunIdRef.current = createChallengeRunId();
 
     setState((prev) => ({
@@ -548,11 +642,41 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
   const changeMode = useCallback(
     (mode: PracticeMode) => {
+      if (practiceMode === "challenge" && mode !== "challenge") {
+        const hasProgress =
+          !challengeRunEnded &&
+          (challengeCurrentScore > 0 || challengeStrikes > 0 || challengeRunTotalTimeMs > 0);
+
+        if (hasProgress) {
+          const heartsLeft = Math.max(0, CHALLENGE_MAX_STRIKES - challengeStrikes);
+          const totalQuestions = Math.max(1, challengeCurrentScore + challengeStrikes);
+
+          setChallengeScore(challengeCurrentScore);
+          if (challengeCurrentScore > challengeBestScore) {
+            setChallengeBestScore(challengeCurrentScore);
+            saveChallengeBestScore(challengeCurrentScore);
+          }
+
+          void submitChallengeRun({
+            score: challengeCurrentScore,
+            heartsLeft,
+            totalTimeMs: challengeRunTotalTimeMs,
+            totalQuestions,
+            runStatus: "quit",
+          });
+        }
+      }
+
       setPracticeMode(mode);
       setChallengeScore(0);
       setChallengeCurrentScore(0);
+      setChallengeStrikes(0);
+      setChallengeRunTotalTimeMs(0);
+      setChallengeRunEnded(false);
       setDailyEventIndex(0);
       setDailyScore(0);
+      setDailyAnsweredCount(0);
+      setDailyTotalTimeMs(0);
       challengeRunIdRef.current = createChallengeRunId();
 
       if (mode === "daily") {
@@ -573,7 +697,20 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
 
       void loadRandomEvent(selectedCategory, searchQuery);
     },
-    [dailyEvents, loadRandomEvent, refreshDailyEvents, searchQuery, selectedCategory]
+    [
+      practiceMode,
+      challengeRunEnded,
+      challengeCurrentScore,
+      challengeStrikes,
+      challengeRunTotalTimeMs,
+      challengeBestScore,
+      submitChallengeRun,
+      dailyEvents,
+      loadRandomEvent,
+      refreshDailyEvents,
+      searchQuery,
+      selectedCategory,
+    ]
   );
 
   const changeCategory = useCallback(
@@ -622,6 +759,7 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
     accuracy,
     formattedAccuracy,
     makePrediction,
+    registerChallengeTimeout,
     nextEvent,
     resetSession,
     practiceEventGroup,
@@ -634,8 +772,10 @@ export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metad
     challengeScore,
     challengeCurrentScore,
     challengeBestScore,
+    challengeStrikes,
+    challengeHeartsLeft: Math.max(0, CHALLENGE_MAX_STRIKES - challengeStrikes),
+    challengeRunEnded,
     dailyScore,
-    dailyHighScore,
     dailyDate,
     isLoadingEvents,
     eventLoadError,

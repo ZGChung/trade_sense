@@ -138,7 +138,7 @@ export function ResultView({
 
           <button
             onClick={onContinue}
-            className="mt-6 w-full rounded-xl bg-blue-500 px-6 py-4 font-semibold text-white transition-colors duration-200 hover:bg-blue-600"
+            className="mt-6 h-12 w-full rounded-xl bg-blue-500 px-6 text-sm font-semibold text-white transition-colors duration-200 hover:bg-blue-600"
           >
             继续练习
           </button>
@@ -154,7 +154,7 @@ export function ResultView({
               document.body.appendChild(toast);
               setTimeout(() => toast.remove(), 2000);
             }}
-            className="mt-2 w-full rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 transition-colors duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            className="mt-2 h-12 w-full rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-600 transition-colors duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
           >
             📤 分享结果
           </button>

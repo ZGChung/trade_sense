@@ -171,14 +171,23 @@ export function useAchievements(
     if (!currentUnlocked.has("first_prediction") && totalAttempts >= 1) {
       newUnlocked.push("first_prediction");
     }
+    if (!currentUnlocked.has("streak_3") && currentStreak >= 3) {
+      newUnlocked.push("streak_3");
+    }
     if (!currentUnlocked.has("streak_5") && currentStreak >= 5) {
       newUnlocked.push("streak_5");
     }
     if (!currentUnlocked.has("streak_10") && currentStreak >= 10) {
       newUnlocked.push("streak_10");
     }
+    if (!currentUnlocked.has("streak_15") && currentStreak >= 15) {
+      newUnlocked.push("streak_15");
+    }
     if (!currentUnlocked.has("streak_25") && currentStreak >= 25) {
       newUnlocked.push("streak_25");
+    }
+    if (!currentUnlocked.has("streak_30") && currentStreak >= 30) {
+      newUnlocked.push("streak_30");
     }
     if (!currentUnlocked.has("streak_50") && currentStreak >= 50) {
       newUnlocked.push("streak_50");
@@ -192,14 +201,26 @@ export function useAchievements(
     if (!currentUnlocked.has("perfect_20") && maxStreak >= 20) {
       newUnlocked.push("perfect_20");
     }
+    if (!currentUnlocked.has("challenge_starter") && challengeScore >= 10) {
+      newUnlocked.push("challenge_starter");
+    }
     if (!currentUnlocked.has("challenge_master") && challengeScore >= 50) {
       newUnlocked.push("challenge_master");
+    }
+    if (!currentUnlocked.has("challenge_legend") && challengeScore >= 100) {
+      newUnlocked.push("challenge_legend");
     }
     if (!currentUnlocked.has("dedicated_trader") && totalAttempts >= 100) {
       newUnlocked.push("dedicated_trader");
     }
+    if (!currentUnlocked.has("volume_300") && totalAttempts >= 300) {
+      newUnlocked.push("volume_300");
+    }
     if (!currentUnlocked.has("century_club") && totalAttempts >= 1000) {
       newUnlocked.push("century_club");
+    }
+    if (!currentUnlocked.has("volume_2000") && totalAttempts >= 2000) {
+      newUnlocked.push("volume_2000");
     }
     if (!currentUnlocked.has("daily_streak_3") && dailyStreak.streak >= 3) {
       newUnlocked.push("daily_streak_3");

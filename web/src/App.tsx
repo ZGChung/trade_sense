@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
 import { usePracticeHistory } from "./hooks/usePracticeHistory";
@@ -32,16 +32,16 @@ import {
 import {
   fetchChallengeLeaderboard,
   fetchDailyLeaderboard,
+  resolvePlayerIdentity,
   type LeaderboardEntry,
 } from "./services/analyticsService";
 
-const CHALLENGE_TIMER_SECONDS = 15;
-const CHALLENGE_PROGRESS_TARGET = 10;
+const CHALLENGE_TIMER_SECONDS = 10;
 
 const MODE_DESCRIPTIONS: Record<"casual" | "challenge" | "daily", string> = {
-  casual: "练习模式：随机抽题、无限次数，适合快速积累经验。",
-  challenge: "挑战模式：答错即结束，本轮连胜越高，排名越靠前。",
-  daily: "每日挑战：每天固定题组，和所有用户同题竞赛。",
+  casual: "练习模式：随机抽题、无限次数，可自由搜索股票并快速练习。",
+  challenge: "挑战模式：每题限时10秒，答错或超时记1次失误，累计3次失误本轮结束。",
+  daily: "每日挑战：每天固定10题，按正确率排名；正确率相同则总用时更短者靠前。",
 };
 
 function App() {
@@ -55,6 +55,7 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showSideMenu, setShowSideMenu] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("tradesense_darkmode");
@@ -65,7 +66,9 @@ function App() {
   });
 
   const [dailyLeaderboard, setDailyLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [dailyCurrentRank, setDailyCurrentRank] = useState<LeaderboardEntry | null>(null);
   const [challengeLeaderboard, setChallengeLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [challengeCurrentRank, setChallengeCurrentRank] = useState<LeaderboardEntry | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
 
@@ -84,7 +87,7 @@ function App() {
 
   const countdown = useCountdown(CHALLENGE_TIMER_SECONDS, () => {
     if (session.practiceMode === "challenge" && !session.showResult) {
-      session.makePrediction(PredictionOptionValues.FLAT);
+      session.registerChallengeTimeout();
     }
   });
 
@@ -114,7 +117,7 @@ function App() {
   const lastAttemptCountRef = useRef<number | null>(null);
 
   const loadLeaderboard = useCallback(async () => {
-    if (session.practiceMode !== "daily" && session.practiceMode !== "challenge") {
+    if (!showLeaderboard || (session.practiceMode !== "daily" && session.practiceMode !== "challenge")) {
       setLeaderboardError(null);
       return;
     }
@@ -123,19 +126,23 @@ function App() {
     setLeaderboardError(null);
 
     try {
+      const identity = await resolvePlayerIdentity(auth.user ?? null);
+
       if (session.practiceMode === "daily") {
-        const entries = await fetchDailyLeaderboard(10, session.dailyDate);
-        setDailyLeaderboard(entries);
+        const snapshot = await fetchDailyLeaderboard(5, session.dailyDate, identity.playerId);
+        setDailyLeaderboard(snapshot.topEntries);
+        setDailyCurrentRank(snapshot.currentUserEntry);
       } else {
-        const entries = await fetchChallengeLeaderboard(10);
-        setChallengeLeaderboard(entries);
+        const snapshot = await fetchChallengeLeaderboard(5, identity.playerId);
+        setChallengeLeaderboard(snapshot.topEntries);
+        setChallengeCurrentRank(snapshot.currentUserEntry);
       }
     } catch (error) {
       setLeaderboardError(error instanceof Error ? error.message : "排行榜加载失败");
     } finally {
       setLeaderboardLoading(false);
     }
-  }, [session.practiceMode, session.dailyDate]);
+  }, [showLeaderboard, session.practiceMode, session.dailyDate, auth.user]);
 
   useEffect(() => {
     void loadLeaderboard();
@@ -274,40 +281,27 @@ function App() {
 
   const renderModeInfo = () => {
     if (session.practiceMode === "daily") {
-      return (
-        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-green-200 bg-green-50 p-3 dark:border-green-900/40 dark:bg-green-900/20">
-          <div className="text-center">
-            <p className="text-xs text-green-700 dark:text-green-300">今日得分</p>
-            <p className="text-lg font-semibold text-green-800 dark:text-green-100">{session.dailyScore}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-green-700 dark:text-green-300">历史最高</p>
-            <p className="text-lg font-semibold text-green-800 dark:text-green-100">{session.dailyHighScore}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-green-700 dark:text-green-300">当前题号</p>
-            <p className="text-lg font-semibold text-green-800 dark:text-green-100">
-              {session.currentEventIndex + 1}/{session.totalEvents}
-            </p>
-          </div>
-        </div>
-      );
+      return null;
     }
 
     if (session.practiceMode === "challenge") {
       return (
-        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-purple-200 bg-purple-50 p-3 dark:border-purple-900/40 dark:bg-purple-900/20">
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-900/20">
           <div className="text-center">
-            <p className="text-xs text-purple-700 dark:text-purple-300">本轮连胜</p>
-            <p className="text-lg font-semibold text-purple-800 dark:text-purple-100">{session.challengeCurrentScore}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">本轮通过</p>
+            <p className="text-lg font-semibold text-amber-800 dark:text-amber-100">{session.challengeCurrentScore}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-purple-700 dark:text-purple-300">上轮得分</p>
-            <p className="text-lg font-semibold text-purple-800 dark:text-purple-100">{session.challengeScore}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">失误</p>
+            <p className="text-lg font-semibold text-amber-800 dark:text-amber-100">{session.challengeStrikes}/3</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-purple-700 dark:text-purple-300">历史最佳</p>
-            <p className="text-lg font-semibold text-purple-800 dark:text-purple-100">{session.challengeBestScore}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">生命</p>
+            <p className="text-lg font-semibold text-amber-800 dark:text-amber-100">
+              {Array.from({ length: 3 }, (_, index) =>
+                index < session.challengeHeartsLeft ? "❤️" : "🖤"
+              ).join(" ")}
+            </p>
           </div>
         </div>
       );
@@ -331,56 +325,8 @@ function App() {
     );
   };
 
-  const renderProgress = () => {
-    if (session.practiceMode === "casual") {
-      return (
-        <div className="mb-4 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-          休闲模式为随机抽题，无固定题组进度。
-        </div>
-      );
-    }
-
-    if (session.practiceMode === "daily") {
-      const progress = ((session.currentEventIndex + 1) / session.totalEvents) * 100;
-      return (
-        <div className="mb-4 rounded-lg border border-gray-200 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-900">
-          <div className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>每日挑战进度（按题组）</span>
-            <span>{session.currentEventIndex + 1}/{session.totalEvents}</span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <motion.div
-              className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.35 }}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    const challengeProgress = Math.min(
-      (session.challengeCurrentScore / CHALLENGE_PROGRESS_TARGET) * 100,
-      100
-    );
-    return (
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-900">
-        <div className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-          <span>挑战进度（目标 {CHALLENGE_PROGRESS_TARGET} 连胜）</span>
-          <span>{session.challengeCurrentScore}/{CHALLENGE_PROGRESS_TARGET}</span>
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-          <motion.div
-            className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-500"
-            initial={{ width: 0 }}
-            animate={{ width: `${challengeProgress}%` }}
-            transition={{ duration: 0.35 }}
-          />
-        </div>
-      </div>
-    );
-  };
+  const topControlClass =
+    "inline-flex h-11 w-36 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white/95 px-3 text-sm font-semibold text-gray-700 shadow-md transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-800";
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gray-50 dark:bg-gray-950">
@@ -397,46 +343,41 @@ function App() {
       </button>
 
       <div className="fixed right-4 top-4 z-40 flex flex-col items-end gap-2">
-        <div className="flex items-center gap-2">
-          {auth.isLoading ? (
-            <div className="rounded-lg bg-gray-200 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-              登录状态加载中...
-            </div>
-          ) : auth.user ? (
-            <>
-              <div className="rounded-lg bg-green-100 px-3 py-2 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                已登录
-              </div>
-              <button
-                onClick={() => void auth.signOut()}
-                className="rounded-lg bg-gray-200 px-3 py-2 text-xs text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-              >
-                退出
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-xs text-white transition-colors hover:bg-blue-700"
-            >
-              登录同步
-            </button>
-          )}
-        </div>
+        {auth.isLoading ? (
+          <div className={`${topControlClass} cursor-not-allowed opacity-80`}>
+            登录状态加载中...
+          </div>
+        ) : auth.user ? (
+          <button
+            onClick={() => void auth.signOut()}
+            className={topControlClass}
+          >
+            退出登录
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className={topControlClass}
+          >
+            登录同步
+          </button>
+        )}
 
         <AchievementBadge
           count={achievements.unlockedCount}
           total={achievements.totalCount}
           onClick={() => setShowAchievements(true)}
+          className={topControlClass}
         />
 
         <button
           onClick={toggleDarkMode}
-          className="rounded-lg bg-gray-200 p-2 text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          className={topControlClass}
           title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
           aria-label={darkMode ? "切换到浅色模式" : "切换到深色模式"}
         >
-          {darkMode ? "☀️" : "🌙"}
+          <span>{darkMode ? "☀️" : "🌙"}</span>
+          <span>{darkMode ? "浅色模式" : "深色模式"}</span>
         </button>
       </div>
 
@@ -487,42 +428,50 @@ function App() {
 
         <ModeSelector
           currentMode={session.practiceMode}
-          onModeChange={session.changeMode}
-          isVisible={!session.showResult}
+          onModeChange={(mode) => {
+            session.changeMode(mode);
+            if (mode === "casual") {
+              setShowLeaderboard(false);
+            }
+          }}
+          isVisible
+          showLeaderboardButton={session.practiceMode !== "casual"}
+          leaderboardOpen={showLeaderboard}
+          onLeaderboardClick={() => setShowLeaderboard((prev) => !prev)}
         />
 
-        {!session.showResult && (
-          <>
-            <p className="mb-3 text-center text-sm text-gray-600 dark:text-gray-300">{modeDescription}</p>
-            {renderModeInfo()}
-            {renderProgress()}
+        <p className="mb-3 text-center text-sm text-gray-600 dark:text-gray-300">{modeDescription}</p>
 
-            {session.practiceMode === "daily" && (
-              <LeaderboardPanel
-                title="每日挑战排行榜"
-                subtitle={`日期 ${session.dailyDate} · 取每位用户当日最高分`}
-                entries={dailyLeaderboard}
-                isLoading={leaderboardLoading}
-                error={leaderboardError}
-              />
-            )}
-            {session.practiceMode === "challenge" && (
-              <LeaderboardPanel
-                title="挑战模式排行榜"
-                subtitle="按历史最高分排名"
-                entries={challengeLeaderboard}
-                isLoading={leaderboardLoading}
-                error={leaderboardError}
-              />
-            )}
-          </>
+        {renderModeInfo()}
+
+        {showLeaderboard && session.practiceMode === "daily" && (
+          <LeaderboardPanel
+            mode="daily"
+            title="每日挑战排行榜"
+            subtitle={`日期 ${session.dailyDate} · Top 5 + 你的排名`}
+            entries={dailyLeaderboard}
+            currentUserEntry={dailyCurrentRank}
+            isLoading={leaderboardLoading}
+            error={leaderboardError}
+          />
+        )}
+        {showLeaderboard && session.practiceMode === "challenge" && (
+          <LeaderboardPanel
+            mode="challenge"
+            title="挑战模式排行榜"
+            subtitle="Top 5 + 你的排名 · 排名规则: 通过题数 > 剩余生命 > 总用时"
+            entries={challengeLeaderboard}
+            currentUserEntry={challengeCurrentRank}
+            isLoading={leaderboardLoading}
+            error={leaderboardError}
+          />
         )}
 
         <StockFilter
           selectedCategory={session.selectedCategory}
           onCategoryChange={session.changeCategory}
           searchQuery={session.searchQuery}
-          onSearchChange={session.changeSearch}
+          onSearchChange={session.practiceMode === "casual" ? session.changeSearch : undefined}
         />
 
         {session.eventLoadError && (
