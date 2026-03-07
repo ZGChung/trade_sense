@@ -1,0 +1,49 @@
+name: Data Pipeline
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"   # Weekly pipeline: Sunday 00:00 UTC
+    - cron: "0 12 * * *"  # Daily keep-alive: 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  weekly-pipeline:
+    if: (github.event_name == 'workflow_dispatch' || github.event.schedule == '0 0 * * 0') && secrets.STOCKDATA_API_KEY != '' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pipeline dependencies
+        working-directory: pipeline
+        run: npm install
+
+      - name: Run weekly data pipeline
+        working-directory: pipeline
+        env:
+          STOCKDATA_API_KEY: ${{ secrets.STOCKDATA_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run run
+
+  keep-alive:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 12 * * *' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Keep Supabase project warm
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          curl -sS \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            "${SUPABASE_URL}/rest/v1/event_groups?select=id&limit=1" >/dev/null
+          echo "Keep-alive query completed."

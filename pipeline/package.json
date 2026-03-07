@@ -1,0 +1,20 @@
+{
+  "name": "tradesense-pipeline",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "fetch:news": "tsx fetch-news.ts",
+    "fetch:prices": "tsx fetch-prices.ts",
+    "generate:events": "tsx generate-events.ts",
+    "seed": "tsx seed.ts",
+    "run": "npm run fetch:news && npm run fetch:prices && npm run generate:events"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.52.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

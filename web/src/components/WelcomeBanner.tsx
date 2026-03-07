@@ -24,12 +24,16 @@ const subscribe = (callback: () => void) => {
 const getClientSnapshot = () => {
   const hasVisited = typeof window !== "undefined" && localStorage.getItem("tradesense_visited");
   const dismissed = typeof window !== "undefined" && localStorage.getItem("tradesense_welcome_dismissed");
-  return { hasVisited: !!hasVisited, dismissed: !!dismissed };
+  // useSyncExternalStore snapshots must be referentially stable when unchanged.
+  return `${hasVisited ? "1" : "0"}:${dismissed ? "1" : "0"}`;
 };
-const getServerSnapshot = () => ({ hasVisited: false, dismissed: false });
+const getServerSnapshot = () => "0:0";
 
 export function WelcomeBanner() {
-  const { hasVisited, dismissed } = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const [hasVisitedFlag, dismissedFlag] = snapshot.split(":");
+  const hasVisited = hasVisitedFlag === "1";
+  const dismissed = dismissedFlag === "1";
   const [show, setShow] = useState(!hasVisited && !dismissed);
   const tip = getTipOfTheDay();
   

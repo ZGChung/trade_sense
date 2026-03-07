@@ -2,72 +2,39 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="训练你的金融交易直觉 - 通过历史新闻事件预测股票走势" />
-    <meta name="theme-color" content="#3b82f6" />
+
     <title>TradeSense - 交易直觉训练</title>
-    <style>
-      /* Loading screen - shows before React */
-      .app-loading {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        z-index: 9999;
-      }
-      .app-loading h1 {
-        font-size: 32px;
-        margin: 0 0 10px 0;
-      }
-      .app-loading p {
-        font-size: 18px;
-        opacity: 0.9;
-      }
-      .app-loading .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(255,255,255,0.3);
-        border-top-color: white;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-top: 20px;
-      }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      /* Hide loading when React mounts */
-      #root:not(:empty) + .app-loading,
-      #root:empty + .app-loading {
-        display: none;
-      }
-      /* Fallback for if React fails completely */
-      body.react-error .app-loading {
-        display: flex !important;
-      }
-    </style>
+    <meta name="description" content="通过历史新闻事件预测股票走势，训练你的交易直觉与市场判断力。" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="robots" content="index,follow" />
+
+    <link rel="canonical" href="https://trade-sense-delta.vercel.app/" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TradeSense" />
+    <meta property="og:title" content="TradeSense - 交易直觉训练" />
+    <meta
+      property="og:description"
+      content="通过历史新闻事件预测股票走势，训练你的交易直觉与市场判断力。"
+    />
+    <meta property="og:url" content="https://trade-sense-delta.vercel.app/" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TradeSense - 交易直觉训练" />
+    <meta
+      name="twitter:description"
+      content="通过历史新闻事件预测股票走势，训练你的交易直觉与市场判断力。"
+    />
+
+    <script defer src="/_vercel/insights/script.js"></script>
   </head>
   <body>
     <div id="root"></div>
-    <!-- Fallback loading screen - shows if React fails to load -->
-    <div class="app-loading" id="loading-screen">
-      <h1>📈 TradeSense</h1>
-      <p>交易直觉训练</p>
-      <div class="spinner"></div>
-      <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">正在加载...</p>
-    </div>
-    <script>
-      // Auto-hide loading screen after 5 seconds regardless
-      setTimeout(function() {
-        var loading = document.getElementById('loading-screen');
-        if (loading) loading.style.display = 'none';
-      }, 5000);
-    </script>
     <script type="module" src="/src/main.tsx"></script>
- </html>
- </body>
+  </body>
+</html>

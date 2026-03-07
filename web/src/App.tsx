@@ -4,6 +4,7 @@ import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
 import { usePracticeHistory } from "./hooks/usePracticeHistory";
 import { useWrongAnswers } from "./hooks/useWrongAnswers";
+import { useAuth } from "./hooks/useAuth";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
@@ -18,45 +19,57 @@ import { WelcomeBanner } from "./components/WelcomeBanner";
 import { Footer } from "./components/Footer";
 import { StreakCelebration } from "./components/StreakCelebration";
 import { CountdownBar } from "./components/CountdownBar";
+import { AuthModal } from "./components/AuthModal";
+import { AISettingsPanel } from "./components/AISettingsPanel";
 import { useCountdown } from "./hooks/useCountdown";
-import { PredictionOption as PredictionOptionValues, PredictionOption, getPerformanceCategory } from "./models/types";
+import {
+  PredictionOption as PredictionOptionValues,
+  PredictionOption,
+  getPerformanceCategory,
+} from "./models/types";
 
 const CHALLENGE_TIMER_SECONDS = 15;
 
 function App() {
-  const session = useTradingSession();
+  const auth = useAuth();
+  const session = useTradingSession(auth.user?.id);
+
   const [showStats, setShowStats] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showWrongAnswers, setShowWrongAnswers] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
+
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('tradesense_darkmode');
-    if (saved !== null) return saved === 'true';
-    return false; // Default to light mode
+    const saved = localStorage.getItem("tradesense_darkmode");
+    if (saved !== null) {
+      return saved === "true";
+    }
+    return false;
   });
 
-  // Apply dark mode class
   useEffect(() => {
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
-    localStorage.setItem('tradesense_darkmode', String(darkMode));
+    localStorage.setItem("tradesense_darkmode", String(darkMode));
   }, [darkMode]);
 
   const toggleDarkMode = useCallback(() => {
-    setDarkMode(prev => !prev);
+    setDarkMode((prev) => !prev);
   }, []);
 
   const countdown = useCountdown(CHALLENGE_TIMER_SECONDS, () => {
-    if (session.practiceMode === 'challenge' && !session.showResult) {
+    if (session.practiceMode === "challenge" && !session.showResult) {
       session.makePrediction(PredictionOptionValues.FLAT);
     }
   });
 
-  // Start/reset timer based on mode and question state
   useEffect(() => {
-    if (session.practiceMode === 'challenge' && !session.showResult) {
+    if (session.practiceMode === "challenge" && !session.showResult) {
       countdown.reset();
       countdown.start();
     } else {
@@ -64,31 +77,27 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.practiceMode, session.showResult, session.currentEventGroup.id]);
-  
+
   const achievements = useAchievements(
     session.totalAttempts,
     session.currentStreak,
     session.maxStreak,
-    session.challengeScore
+    session.challengeScore,
+    auth.user?.id
   );
-  
-  const practiceHistory = usePracticeHistory();
-  const wrongAnswers = useWrongAnswers();
-  const [showWrongAnswers, setShowWrongAnswers] = useState(false);
 
-  // Track previous state to detect when a practice is completed
+  const practiceHistory = usePracticeHistory();
+  const wrongAnswers = useWrongAnswers(auth.user?.id);
+
   const [prevShowResult, setPrevShowResult] = useState(false);
   const [prevCorrectPredictions, setPrevCorrectPredictions] = useState(0);
 
-  // Save practice record when a question is completed
   useEffect(() => {
-    // When user moves from result view back to prediction (next question)
     if (prevShowResult && !session.showResult && session.totalAttempts > 0) {
-      // Save record for casual mode only
-      if (session.practiceMode === 'casual') {
+      if (session.practiceMode === "casual") {
         const isCorrect = session.correctPredictions > prevCorrectPredictions;
         practiceHistory.addRecord({
-          mode: 'casual',
+          mode: "casual",
           totalQuestions: 1,
           correctAnswers: isCorrect ? 1 : 0,
           accuracy: isCorrect ? 100 : 0,
@@ -98,10 +107,14 @@ function App() {
     }
     setPrevShowResult(session.showResult);
     setPrevCorrectPredictions(session.correctPredictions);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.showResult, session.practiceMode, session.currentStreak]);
-  
-  // Track wrong answers when result is shown
+
+  const finalEvent =
+    session.currentEventGroup.events[
+      session.currentEventGroup.events.length - 1
+    ];
+
   useEffect(() => {
     if (session.showResult && session.userPrediction && finalEvent) {
       const correctAnswer = getPerformanceCategory(finalEvent.actualPerformance);
@@ -118,7 +131,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.showResult]);
 
-  // Check achievements after each prediction
   useEffect(() => {
     if (session.totalAttempts > 0) {
       achievements.checkAndUnlockAchievements();
@@ -126,51 +138,50 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.totalAttempts, session.currentStreak, session.maxStreak, session.challengeScore]);
 
-  const finalEvent =
-    session.currentEventGroup.events[
-      session.currentEventGroup.events.length - 1
-    ];
-
-  // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
         return;
       }
 
-      // Prediction shortcuts (when not showing result)
       if (!session.showResult) {
-        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-          e.preventDefault();
+        if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") {
+          event.preventDefault();
           session.makePrediction(PredictionOptionValues.RISE);
-        } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-          e.preventDefault();
+        } else if (
+          event.key === "ArrowDown" ||
+          event.key === "s" ||
+          event.key === "S"
+        ) {
+          event.preventDefault();
           session.makePrediction(PredictionOptionValues.FALL);
-        } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-          e.preventDefault();
+        } else if (
+          event.key === "ArrowLeft" ||
+          event.key === "a" ||
+          event.key === "A"
+        ) {
+          event.preventDefault();
           session.makePrediction(PredictionOptionValues.FLAT);
         }
-      } else {
-        // Continue / Next
-        if (e.key === " " || e.key === "Enter") {
-          e.preventDefault();
-          session.nextEvent();
-        }
+      } else if (event.key === " " || event.key === "Enter") {
+        event.preventDefault();
+        session.nextEvent();
       }
 
-      // Global shortcuts
-      if (e.key === "h" || e.key === "H") {
-        e.preventDefault();
+      if (event.key === "h" || event.key === "H") {
+        event.preventDefault();
         setShowStats((prev) => !prev);
-      } else if (e.key === "o" || e.key === "O") {
-        e.preventDefault();
+      } else if (event.key === "o" || event.key === "O") {
+        event.preventDefault();
         setShowAchievements((prev) => !prev);
-      } else if (e.key === "l" || e.key === "L") {
-        e.preventDefault();
+      } else if (event.key === "l" || event.key === "L") {
+        event.preventDefault();
         setShowHistory((prev) => !prev);
-      } else if (e.key === "r" || e.key === "R") {
-        e.preventDefault();
+      } else if (event.key === "r" || event.key === "R") {
+        event.preventDefault();
         session.resetSession();
       }
     };
@@ -179,41 +190,84 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [session]);
 
-  // Safety check - ensure we have events
+  if (session.isLoadingEvents && !finalEvent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <p className="text-gray-500 dark:text-gray-400">正在加载题目数据...</p>
+      </div>
+    );
+  }
+
   if (!finalEvent || session.currentEventGroup.events.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400">Error: No events available</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white"
+          >
+            刷新重试
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
-      {/* Achievement Badge */}
-      <AchievementBadge 
-        count={achievements.unlockedCount} 
+    <div className="min-h-screen overflow-x-hidden bg-gray-50 dark:bg-gray-950">
+      <AchievementBadge
+        count={achievements.unlockedCount}
         total={achievements.totalCount}
         onClick={() => setShowAchievements(true)}
       />
-      
-      {/* Welcome Banner */}
-      <div className="container mx-auto px-4 pt-14 max-w-2xl">
+
+      <button
+        onClick={toggleDarkMode}
+        className="fixed left-4 top-4 z-40 rounded-lg bg-gray-200 p-2 text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
+      >
+        {darkMode ? "☀️" : "🌙"}
+      </button>
+
+      <div className="fixed right-4 top-4 z-40 flex items-center gap-2">
+        {auth.isLoading ? (
+          <div className="rounded-lg bg-gray-200 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+            登录状态加载中...
+          </div>
+        ) : auth.user ? (
+          <>
+            <div className="rounded-lg bg-green-100 px-3 py-2 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              已登录
+            </div>
+            <button
+              onClick={() => void auth.signOut()}
+              className="rounded-lg bg-gray-200 px-3 py-2 text-xs text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              退出
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="rounded-lg bg-blue-600 px-3 py-2 text-xs text-white transition-colors hover:bg-blue-700"
+          >
+            登录同步
+          </button>
+        )}
+      </div>
+
+      <div className="container mx-auto max-w-2xl px-4 pt-14">
         <WelcomeBanner />
       </div>
-      
-      {/* Streak Celebration */}
+
       <StreakCelebration streak={session.currentStreak} />
-      
-      {/* Achievement Toast */}
-      <AchievementToast 
+
+      <AchievementToast
         achievement={achievements.newlyUnlocked ?? null}
         onClose={achievements.clearNewlyUnlocked}
       />
-      
-      {/* Achievement Panel */}
+
       <AnimatePresence>
         {showAchievements && (
           <AchievementPanel
@@ -223,88 +277,76 @@ function App() {
           />
         )}
       </AnimatePresence>
-      
-      {/* History Panel */}
+
       <AnimatePresence>
-        {showHistory && (
-          <HistoryPanel
-            onClose={() => setShowHistory(false)}
-          />
-        )}
+        {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
       </AnimatePresence>
-      
-      <div className="container mx-auto px-4 py-6 max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-6 pt-4">
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className="fixed top-4 left-4 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors z-40"
-            title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
-          >
-            {darkMode ? "☀️" : "🌙"}
-          </button>
-          
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              TradeSense
-            </h1>
+
+      <div className="container mx-auto max-w-2xl px-4 py-6">
+        <div className="mb-6 pt-4 text-center">
+          <div className="mb-2 flex items-center justify-center gap-2">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">TradeSense</h1>
             <ModeBadge mode={session.practiceMode} />
           </div>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
-            训练你的交易直觉
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-lg text-gray-600 dark:text-gray-400">训练你的交易直觉</p>
+          <p className="mt-1 text-xs text-gray-400">
             快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | O成就 | L历史 | R重置
           </p>
-          
-          {/* Challenge Mode Score */}
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {auth.user
+              ? `云端模式: ${auth.user.email ?? auth.user.id}`
+              : "匿名模式: 数据仅保存在当前浏览器"}
+          </p>
+          {(session.isCloudSyncing || wrongAnswers.isSyncing || achievements.isSyncing) && (
+            <p className="mt-1 text-xs text-blue-500">正在同步云端数据...</p>
+          )}
+
           {session.practiceMode === "challenge" && session.challengeScore > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="mt-3 inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-lg"
+              className="mt-3 inline-block rounded-lg bg-purple-100 px-4 py-2 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
             >
               🎯 挑战得分: {session.challengeScore}
             </motion.div>
           )}
-          
-          {/* Daily Challenge Score */}
+
           {session.practiceMode === "daily" && (
-            <motion.div 
+            <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="mt-3 inline-block bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-4 py-2 rounded-lg"
+              className="mt-3 inline-block rounded-lg bg-green-100 px-4 py-2 text-green-700 dark:bg-green-900/30 dark:text-green-300"
             >
               📅 今日得分: {session.dailyScore} | 最高: {session.dailyHighScore}
             </motion.div>
           )}
-          
-          {/* Progress Bar */}
-          <div className="mt-4 max-w-xs mx-auto">
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+
+          <div className="mx-auto mt-4 max-w-xs">
+            <div className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>练习进度</span>
-              <span>{session.currentEventIndex + 1}/{session.totalEvents}</span>
+              <span>
+                {session.currentEventIndex + 1}/{session.totalEvents}
+              </span>
             </div>
-            <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
               <motion.div
                 className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
                 initial={{ width: 0 }}
-                animate={{ width: `${((session.currentEventIndex + 1) / session.totalEvents) * 100}%` }}
+                animate={{
+                  width: `${((session.currentEventIndex + 1) / session.totalEvents) * 100}%`,
+                }}
                 transition={{ duration: 0.5 }}
               />
             </div>
           </div>
         </div>
 
-        {/* Mode Selector */}
         <ModeSelector
           currentMode={session.practiceMode}
           onModeChange={session.changeMode}
           isVisible={!session.showResult}
         />
 
-        {/* Stock Category Filter */}
         <StockFilter
           selectedCategory={session.selectedCategory}
           onCategoryChange={session.changeCategory}
@@ -312,10 +354,19 @@ function App() {
           onSearchChange={session.changeSearch}
         />
 
-        {/* Stats Panel - Collapsible */}
+        {session.eventLoadError && (
+          <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            数据加载已降级到本地缓存: {session.eventLoadError}
+          </div>
+        )}
+
+        {session.isLoadingEvents && (
+          <div className="mb-4 text-center text-sm text-gray-500 dark:text-gray-400">正在拉取最新题目...</div>
+        )}
+
         <div
           className={`mb-6 transition-all duration-500 ease-in-out ${
-            showStats ? "opacity-100 max-h-96" : "opacity-0 max-h-0 overflow-hidden"
+            showStats ? "max-h-96 opacity-100" : "max-h-0 overflow-hidden opacity-0"
           }`}
         >
           <StatsView
@@ -326,15 +377,12 @@ function App() {
           />
         </div>
 
-        {/* Main Content */}
         <div className="space-y-6">
-          {/* Event Card */}
           <EventCard eventGroup={session.currentEventGroup} />
 
           {!session.showResult ? (
             <>
-              {/* Challenge Timer */}
-              {session.practiceMode === 'challenge' && (
+              {session.practiceMode === "challenge" && (
                 <CountdownBar
                   secondsLeft={countdown.secondsLeft}
                   progress={countdown.progress}
@@ -342,15 +390,13 @@ function App() {
                 />
               )}
 
-              {/* Prediction Prompt */}
-              <div className="text-center px-5 py-4">
+              <div className="px-5 py-4 text-center">
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  请预测 {session.currentEventGroup.stockName} 在{" "}
-                  {finalEvent.date} 后{finalEvent.daysAfterEvent}天的涨跌情况
+                  请预测 {session.currentEventGroup.stockName} 在 {finalEvent.date} 后
+                  {finalEvent.daysAfterEvent}天的涨跌情况
                 </p>
               </div>
 
-              {/* Prediction Buttons */}
               <div className="space-y-4 px-10">
                 {Object.values(PredictionOptionValues).map((option) => (
                   <PredictionButton
@@ -363,53 +409,59 @@ function App() {
               </div>
             </>
           ) : session.userPrediction ? (
-              <ResultView
-                eventGroup={session.currentEventGroup}
-                event={finalEvent}
-                userPrediction={session.userPrediction}
-                onContinue={session.nextEvent}
-                totalAttempts={session.totalAttempts}
-                correctPredictions={session.correctPredictions}
-              />
+            <ResultView
+              eventGroup={session.currentEventGroup}
+              event={finalEvent}
+              userPrediction={session.userPrediction}
+              onContinue={session.nextEvent}
+              totalAttempts={session.totalAttempts}
+              correctPredictions={session.correctPredictions}
+            />
           ) : null}
         </div>
 
-        {/* Navigation Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-4 py-3 flex justify-between items-center">
+        <div className="fixed bottom-0 left-0 right-0 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
           <button
             onClick={() => setShowStats(!showStats)}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="px-3 py-2 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             aria-label="Toggle stats"
           >
             {showStats ? "▲" : "📊"}
           </button>
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="px-3 py-2 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             aria-label="History"
           >
             📜
           </button>
           <button
             onClick={() => setShowWrongAnswers(true)}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
+            className="flex items-center gap-1 px-3 py-2 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             aria-label="Wrong answers"
           >
-            📝 {wrongAnswers.getWrongAnswersCount() > 0 && (
-              <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">
+            📝
+            {wrongAnswers.getWrongAnswersCount() > 0 && (
+              <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-400">
                 {wrongAnswers.getWrongAnswersCount()}
               </span>
             )}
           </button>
           <button
+            onClick={() => setShowAISettings(true)}
+            className="px-3 py-2 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            aria-label="AI settings"
+          >
+            ⚙️
+          </button>
+          <button
             onClick={session.resetSession}
-            className="px-4 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+            className="px-3 py-2 text-red-600 transition-colors hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
           >
             重置
           </button>
         </div>
 
-        {/* Wrong Answers Panel */}
         <WrongAnswersPanel
           isOpen={showWrongAnswers}
           onClose={() => setShowWrongAnswers(false)}
@@ -422,10 +474,19 @@ function App() {
           }}
         />
 
-        {/* Spacer for fixed bottom bar */}
-        <div className="h-16"></div>
-        
-        {/* Footer */}
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          auth={auth}
+        />
+
+        <AISettingsPanel
+          isOpen={showAISettings}
+          onClose={() => setShowAISettings(false)}
+        />
+
+        <div className="h-16" />
+
         <Footer />
       </div>
     </div>
