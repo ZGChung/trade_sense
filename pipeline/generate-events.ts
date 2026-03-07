@@ -21,10 +21,204 @@ interface GeneratedEventGroup {
   events: GeneratedEvent[];
 }
 
-function buildGeneratedEventGroups(
+interface SeedEvent {
+  date: string;
+  titleEn: string;
+  sourceUrl: string;
+}
+
+interface GeminiEvent {
+  date: string;
+  descriptionZh: string;
+}
+
+const MIN_EVENTS_PER_STOCK = 3;
+const GEMINI_MODEL = process.env.PIPELINE_GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+const GEMINI_DELAY_MS = Math.max(0, Number(process.env.PIPELINE_GEMINI_DELAY_MS ?? "4200"));
+
+function getGeminiApiKey(): string {
+  const key = process.env.GEMINI_API_KEY?.trim() || process.env.VITE_GEMINI_API_KEY?.trim() || "";
+  if (!key) {
+    throw new Error("Missing required env: GEMINI_API_KEY");
+  }
+  return key;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function toDateString(input: string, fallback: string): string {
+  const parsed = new Date(input);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+  return parsed.toISOString().split("T")[0];
+}
+
+function shiftDate(baseDate: string, days: number): string {
+  const parsed = new Date(baseDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return baseDate;
+  }
+
+  parsed.setDate(parsed.getDate() + days);
+  return parsed.toISOString().split("T")[0];
+}
+
+function normalizeZhText(input: string): string {
+  return input.replace(/\s+/g, " ").trim();
+}
+
+function extractJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+  return text.slice(start, end + 1);
+}
+
+function buildPrompt(symbol: string, stockName: string, seedEvents: SeedEvent[]): string {
+  const lines = seedEvents
+    .map((event, index) => `${index + 1}. ${event.date} | ${event.titleEn}`)
+    .join("\n");
+
+  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n任务：\n1) 先把以上英文事件全部翻译成简体中文。\n2) 如果事件数量不足 ${MIN_EVENTS_PER_STOCK} 条，再补充到 ${MIN_EVENTS_PER_STOCK} 条，补充事件也要是中文、与该股票近期市场关注点相关。\n3) 禁止输出英文，禁止输出解释，禁止 Markdown。\n4) 每条事件描述控制在 14~38 字。\n5) 日期使用 YYYY-MM-DD。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}。`;
+}
+
+async function callGemini(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 500,
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`GEMINI_HTTP_${response.status}:${errorText}`);
+  }
+
+  const data = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!text) {
+    throw new Error("GEMINI_EMPTY_RESPONSE");
+  }
+
+  return text;
+}
+
+function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[]): GeminiEvent[] {
+  if (!raw || typeof raw !== "object") {
+    return [];
+  }
+
+  const maybeEvents = (raw as { events?: unknown }).events;
+  if (!Array.isArray(maybeEvents)) {
+    return [];
+  }
+
+  const baseDate = seedEvents[0]?.date || new Date().toISOString().split("T")[0];
+  const normalized = maybeEvents
+    .map((item, index) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const row = item as { date?: unknown; description_zh?: unknown };
+      if (typeof row.description_zh !== "string") {
+        return null;
+      }
+
+      const descriptionZh = normalizeZhText(row.description_zh);
+      if (!descriptionZh) {
+        return null;
+      }
+
+      const fallbackDate = seedEvents[index]?.date || shiftDate(baseDate, -index);
+      const date =
+        typeof row.date === "string"
+          ? toDateString(row.date, fallbackDate)
+          : fallbackDate;
+
+      return {
+        date,
+        descriptionZh,
+      };
+    })
+    .filter((item): item is GeminiEvent => Boolean(item));
+
+  return normalized.slice(0, MIN_EVENTS_PER_STOCK);
+}
+
+async function enrichEventsWithGemini(
+  apiKey: string,
+  symbol: string,
+  stockName: string,
+  seedEvents: SeedEvent[]
+): Promise<GeminiEvent[]> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const prompt = buildPrompt(symbol, stockName, seedEvents);
+      const text = await callGemini(apiKey, prompt);
+      const jsonText = extractJsonObject(text) ?? text;
+      const parsed = JSON.parse(jsonText) as unknown;
+      const normalized = normalizeGeminiEvents(parsed, seedEvents);
+
+      if (normalized.length >= MIN_EVENTS_PER_STOCK) {
+        return normalized.slice(0, MIN_EVENTS_PER_STOCK);
+      }
+
+      throw new Error(`GEMINI_TOO_FEW_EVENTS:${normalized.length}`);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const message = lastError.message;
+
+      if (message.startsWith("GEMINI_HTTP_429")) {
+        // Respect free-tier RPM limits and retry.
+        await sleep(6000 * attempt);
+        continue;
+      }
+
+      if (message.startsWith("GEMINI_HTTP_5")) {
+        await sleep(1200 * attempt);
+        continue;
+      }
+
+      if (attempt < 3) {
+        await sleep(1200 * attempt);
+        continue;
+      }
+    }
+  }
+
+  throw lastError ?? new Error(`Gemini enrichment failed for ${symbol}`);
+}
+
+async function buildGeneratedEventGroups(
   news: NormalizedNews[],
-  prices: NormalizedPriceMove[]
-): GeneratedEventGroup[] {
+  prices: NormalizedPriceMove[],
+  geminiApiKey: string
+): Promise<GeneratedEventGroup[]> {
   const priceMap = new Map(prices.map((price) => [price.symbol, price]));
 
   const groupedBySymbol = new Map<string, NormalizedNews[]>();
@@ -39,6 +233,8 @@ function buildGeneratedEventGroups(
   }
 
   const result: GeneratedEventGroup[] = [];
+  let processedSymbols = 0;
+
   for (const [symbol, items] of groupedBySymbol.entries()) {
     const price = priceMap.get(symbol);
     if (!price) {
@@ -49,30 +245,61 @@ function buildGeneratedEventGroups(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
 
-    const topNews = sortedNews.slice(0, 3);
-    const events: GeneratedEvent[] = topNews.map((item) => ({
-      description: item.title,
-      eventDate: item.publishedAt.split("T")[0],
-      stockSymbol: symbol,
-      stockName: item.symbolName || symbol,
-      actualPerformance: price.performance,
-      daysAfterEvent: 1,
-      sourceUrl: item.sourceUrl,
-    }));
-
-    if (events.length === 0) {
+    const topNews = sortedNews.slice(0, Math.max(MIN_EVENTS_PER_STOCK, 1));
+    if (topNews.length === 0) {
       continue;
     }
 
-    result.push({
-      stockSymbol: symbol,
-      stockName: topNews[0]?.symbolName || symbol,
-      category: "其他",
-      source: "auto",
-      events,
-    });
+    const seedEvents: SeedEvent[] = topNews.map((item) => ({
+      date: toDateString(item.publishedAt, new Date().toISOString().split("T")[0]),
+      titleEn: item.title,
+      sourceUrl: item.sourceUrl,
+    }));
+
+    try {
+      const enrichedEvents = await enrichEventsWithGemini(
+        geminiApiKey,
+        symbol,
+        topNews[0]?.symbolName || symbol,
+        seedEvents
+      );
+
+      const events: GeneratedEvent[] = enrichedEvents.map((item, index) => ({
+        description: item.descriptionZh,
+        eventDate: item.date,
+        stockSymbol: symbol,
+        stockName: topNews[0]?.symbolName || symbol,
+        actualPerformance: price.performance,
+        daysAfterEvent: 1,
+        sourceUrl: seedEvents[index]?.sourceUrl ?? "",
+      }));
+
+      if (events.length < MIN_EVENTS_PER_STOCK) {
+        console.warn(`Skip ${symbol}: insufficient events after Gemini enrichment.`);
+        continue;
+      }
+
+      result.push({
+        stockSymbol: symbol,
+        stockName: topNews[0]?.symbolName || symbol,
+        category: "其他",
+        source: "auto",
+        events,
+      });
+
+      processedSymbols += 1;
+      if (GEMINI_DELAY_MS > 0) {
+        await sleep(GEMINI_DELAY_MS);
+      }
+    } catch (error) {
+      console.warn(
+        `Skip symbol ${symbol}: Gemini enrichment failed:`,
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   }
 
+  console.log(`Gemini-enriched symbols: ${processedSymbols}`);
   return result;
 }
 
@@ -128,10 +355,11 @@ async function pushToSupabase(groups: GeneratedEventGroup[]): Promise<void> {
 }
 
 async function main() {
+  const geminiApiKey = getGeminiApiKey();
   const news = await readJson<NormalizedNews[]>("news.json");
   const prices = await readJson<NormalizedPriceMove[]>("prices.json");
 
-  const generated = buildGeneratedEventGroups(news, prices);
+  const generated = await buildGeneratedEventGroups(news, prices, geminiApiKey);
   await writeJson("generated-events.json", generated);
 
   await pushToSupabase(generated);

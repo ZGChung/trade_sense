@@ -35,3 +35,8 @@ Status legend: `[ ] pending` `[~] in progress` `[x] done`
 ## Pipeline
 - [x] (3) Use full StockData free quota whenever quota refreshes (maximize data ingestion each cycle)
 
+## 2026-03-07 Follow-up
+- [x] Remove challenge-mode progress bar style UI and keep timer as text-only indicator
+- [x] Align top-right controls (`登录`, `成就`, `日夜模式`) to identical size/style
+- [x] Pipeline: translate fetched StockData events to Chinese via Gemini before DB write
+- [x] Pipeline: guarantee at least 3 events per stock; when fewer, ask Gemini to generate additional events

@@ -27,10 +27,12 @@ jobs:
       - name: Validate required secrets
         env:
           STOCKDATA_API_KEY: ${{ secrets.STOCKDATA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           [ -n "$STOCKDATA_API_KEY" ] || { echo "Missing secret: STOCKDATA_API_KEY"; exit 1; }
+          [ -n "$GEMINI_API_KEY" ] || { echo "Missing secret: GEMINI_API_KEY"; exit 1; }
           [ -n "$SUPABASE_URL" ] || { echo "Missing secret: SUPABASE_URL"; exit 1; }
           [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || { echo "Missing secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
 
@@ -38,6 +40,7 @@ jobs:
         working-directory: pipeline
         env:
           STOCKDATA_API_KEY: ${{ secrets.STOCKDATA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PIPELINE_NEWS_REQUEST_BUDGET: "20"

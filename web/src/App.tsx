@@ -18,7 +18,6 @@ import { StockFilter } from "./components/StockFilter";
 import { WelcomeBanner } from "./components/WelcomeBanner";
 import { Footer } from "./components/Footer";
 import { StreakCelebration } from "./components/StreakCelebration";
-import { CountdownBar } from "./components/CountdownBar";
 import { AuthModal } from "./components/AuthModal";
 import { AISettingsPanel } from "./components/AISettingsPanel";
 import { SideMenu } from "./components/SideMenu";
@@ -286,7 +285,7 @@ function App() {
 
     if (session.practiceMode === "challenge") {
       return (
-        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-900/20">
+        <div className="mb-4 grid grid-cols-4 gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-900/20">
           <div className="text-center">
             <p className="text-xs text-amber-700 dark:text-amber-300">本轮通过</p>
             <p className="text-lg font-semibold text-amber-800 dark:text-amber-100">{session.challengeCurrentScore}</p>
@@ -302,6 +301,10 @@ function App() {
                 index < session.challengeHeartsLeft ? "❤️" : "🖤"
               ).join(" ")}
             </p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-amber-700 dark:text-amber-300">剩余秒数</p>
+            <p className="text-lg font-semibold text-amber-800 dark:text-amber-100">{countdown.secondsLeft}s</p>
           </div>
         </div>
       );
@@ -359,7 +362,7 @@ function App() {
             onClick={() => setShowAuthModal(true)}
             className={topControlClass}
           >
-            登录同步
+            登录
           </button>
         )}
 
@@ -502,14 +505,6 @@ function App() {
 
           {!session.showResult ? (
             <>
-              {session.practiceMode === "challenge" && (
-                <CountdownBar
-                  secondsLeft={countdown.secondsLeft}
-                  progress={countdown.progress}
-                  isRunning={countdown.isRunning}
-                />
-              )}
-
               <div className="px-5 py-4 text-center">
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   请预测 {session.currentEventGroup.stockName} 在 {finalEvent.date} 后
