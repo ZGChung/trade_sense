@@ -24,7 +24,11 @@ function getAchievementState(): AchievementState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored) as Partial<AchievementState>;
+      return {
+        unlocked: Array.isArray(parsed.unlocked) ? (parsed.unlocked as AchievementId[]) : [],
+        newlyUnlocked: null,
+      };
     }
   } catch (error) {
     console.error("Failed to load achievements:", error);
@@ -35,7 +39,14 @@ function getAchievementState(): AchievementState {
 
 function saveAchievementState(state: AchievementState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Persist only unlocked list; newlyUnlocked is session-only UI state.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        unlocked: state.unlocked,
+        newlyUnlocked: null,
+      } satisfies AchievementState)
+    );
   } catch (error) {
     console.error("Failed to save achievements:", error);
   }
@@ -121,8 +132,8 @@ export function useAchievements(
         setState((prev) => {
           const mergedUnlocked = Array.from(new Set([...prev.unlocked, ...remoteAchievements]));
           const nextState: AchievementState = {
-            ...prev,
             unlocked: mergedUnlocked,
+            newlyUnlocked: null,
           };
           saveAchievementState(nextState);
           return nextState;

@@ -1,5 +1,6 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import type { Achievement } from '../models/achievements';
+import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import type { Achievement } from "../models/achievements";
 
 interface AchievementToastProps {
   achievement: Achievement | null;
@@ -7,6 +8,20 @@ interface AchievementToastProps {
 }
 
 export function AchievementToast({ achievement, onClose }: AchievementToastProps) {
+  useEffect(() => {
+    if (!achievement) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      onClose();
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [achievement, onClose]);
+
   if (!achievement) return null;
 
   return (
@@ -40,13 +55,14 @@ interface AchievementBadgeProps {
   count: number;
   total: number;
   onClick: () => void;
+  className?: string;
 }
 
-export function AchievementBadge({ count, total, onClick }: AchievementBadgeProps) {
+export function AchievementBadge({ count, total, onClick, className = "" }: AchievementBadgeProps) {
   return (
     <button
       onClick={onClick}
-      className="fixed top-4 right-4 z-40 bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md"
+      className={`bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md ${className}`}
     >
       <span className="text-lg">🏅</span>
       <span className="font-semibold text-sm">
