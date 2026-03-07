@@ -64,3 +64,6 @@ web/.env.*.local
 
 # Vite
 web/.vite/
+
+# Data pipeline
+pipeline/node_modules/
