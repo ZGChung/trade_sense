@@ -1,19 +1,31 @@
 import { formatDate, getEnv, writeJson } from "./helpers";
 
 interface StockDataNewsItem {
+  uuid: string;
   title: string;
   description: string;
   published_at: string;
-  symbols?: string[];
-  source_url?: string;
+  url?: string;
+  entities?: Array<{
+    symbol?: string;
+    name?: string;
+    country?: string;
+    type?: string;
+  }>;
 }
 
 interface StockDataNewsResponse {
+  error?: {
+    code?: string;
+    message?: string;
+  };
   data?: StockDataNewsItem[];
 }
 
 export interface NormalizedNews {
+  uuid: string;
   symbol: string;
+  symbolName: string;
   title: string;
   description: string;
   publishedAt: string;
@@ -32,9 +44,10 @@ async function fetchNews(): Promise<NormalizedNews[]> {
   const endpoint = new URL("https://api.stockdata.org/v1/news/all");
   endpoint.searchParams.set("api_token", apiKey);
   endpoint.searchParams.set("language", "en");
-  endpoint.searchParams.set("filter_entities", "true");
-  endpoint.searchParams.set("date_from", formatDate(startDate));
-  endpoint.searchParams.set("date_to", formatDate(endDate));
+  endpoint.searchParams.set("must_have_entities", "true");
+  endpoint.searchParams.set("published_after", `${formatDate(startDate)}T00:00:00`);
+  endpoint.searchParams.set("published_before", `${formatDate(endDate)}T23:59:59`);
+  endpoint.searchParams.set("countries", process.env.PIPELINE_NEWS_COUNTRIES ?? "us");
   endpoint.searchParams.set("limit", String(limit));
 
   const response = await fetch(endpoint);
@@ -44,23 +57,47 @@ async function fetchNews(): Promise<NormalizedNews[]> {
   }
 
   const payload = (await response.json()) as StockDataNewsResponse;
+  if (payload.error?.message) {
+    throw new Error(`StockData news API error: ${payload.error.message}`);
+  }
+
   const normalized = (payload.data ?? [])
     .flatMap((item) => {
-      if (!item.symbols || item.symbols.length === 0) {
+      const entities = (item.entities ?? []).filter((entity) => {
+        const hasSymbol = typeof entity.symbol === "string" && entity.symbol.trim().length > 0;
+        if (!hasSymbol) {
+          return false;
+        }
+
+        // Prefer equities by default, but keep anything when type is missing.
+        if (!entity.type) {
+          return true;
+        }
+        return entity.type === "equity";
+      });
+
+      if (entities.length === 0) {
         return [];
       }
 
-      return item.symbols.map((symbol) => ({
-        symbol,
+      return entities.map((entity) => ({
+        uuid: item.uuid,
+        symbol: entity.symbol!,
+        symbolName: entity.name?.trim() || entity.symbol!,
         title: item.title,
         description: item.description || item.title,
         publishedAt: item.published_at,
-        sourceUrl: item.source_url ?? "",
+        sourceUrl: item.url ?? "",
       }));
     })
     .filter((item) => Boolean(item.symbol));
 
-  return normalized;
+  const unique = new Map<string, NormalizedNews>();
+  for (const item of normalized) {
+    unique.set(`${item.uuid}:${item.symbol}`, item);
+  }
+
+  return Array.from(unique.values());
 }
 
 async function main() {

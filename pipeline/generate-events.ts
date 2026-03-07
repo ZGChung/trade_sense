@@ -54,7 +54,7 @@ function buildGeneratedEventGroups(
       description: item.title,
       eventDate: item.publishedAt.split("T")[0],
       stockSymbol: symbol,
-      stockName: symbol,
+      stockName: item.symbolName || symbol,
       actualPerformance: price.performance,
       daysAfterEvent: 1,
       sourceUrl: item.sourceUrl,
@@ -66,7 +66,7 @@ function buildGeneratedEventGroups(
 
     result.push({
       stockSymbol: symbol,
-      stockName: symbol,
+      stockName: topNews[0]?.symbolName || symbol,
       category: "其他",
       source: "auto",
       events,
