@@ -22,18 +22,31 @@ import { CountdownBar } from "./components/CountdownBar";
 import { AuthModal } from "./components/AuthModal";
 import { AISettingsPanel } from "./components/AISettingsPanel";
 import { SideMenu } from "./components/SideMenu";
+import { LeaderboardPanel } from "./components/LeaderboardPanel";
 import { useCountdown } from "./hooks/useCountdown";
 import {
   PredictionOption as PredictionOptionValues,
   PredictionOption,
   getPerformanceCategory,
 } from "./models/types";
+import {
+  fetchChallengeLeaderboard,
+  fetchDailyLeaderboard,
+  type LeaderboardEntry,
+} from "./services/analyticsService";
 
 const CHALLENGE_TIMER_SECONDS = 15;
+const CHALLENGE_PROGRESS_TARGET = 10;
+
+const MODE_DESCRIPTIONS: Record<"casual" | "challenge" | "daily", string> = {
+  casual: "练习模式：随机抽题、无限次数，适合快速积累经验。",
+  challenge: "挑战模式：答错即结束，本轮连胜越高，排名越靠前。",
+  daily: "每日挑战：每天固定题组，和所有用户同题竞赛。",
+};
 
 function App() {
   const auth = useAuth();
-  const session = useTradingSession(auth.user?.id);
+  const session = useTradingSession(auth.user);
 
   const [showStats, setShowStats] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -50,6 +63,11 @@ function App() {
     }
     return false;
   });
+
+  const [dailyLeaderboard, setDailyLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [challengeLeaderboard, setChallengeLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -94,6 +112,34 @@ function App() {
   const [prevShowResult, setPrevShowResult] = useState(false);
   const [prevCorrectPredictions, setPrevCorrectPredictions] = useState(0);
   const lastAttemptCountRef = useRef<number | null>(null);
+
+  const loadLeaderboard = useCallback(async () => {
+    if (session.practiceMode !== "daily" && session.practiceMode !== "challenge") {
+      setLeaderboardError(null);
+      return;
+    }
+
+    setLeaderboardLoading(true);
+    setLeaderboardError(null);
+
+    try {
+      if (session.practiceMode === "daily") {
+        const entries = await fetchDailyLeaderboard(10, session.dailyDate);
+        setDailyLeaderboard(entries);
+      } else {
+        const entries = await fetchChallengeLeaderboard(10);
+        setChallengeLeaderboard(entries);
+      }
+    } catch (error) {
+      setLeaderboardError(error instanceof Error ? error.message : "排行榜加载失败");
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [session.practiceMode, session.dailyDate]);
+
+  useEffect(() => {
+    void loadLeaderboard();
+  }, [loadLeaderboard, session.leaderboardRefreshKey]);
 
   useEffect(() => {
     if (prevShowResult && !session.showResult && session.totalAttempts > 0) {
@@ -169,6 +215,7 @@ function App() {
           session.makePrediction(PredictionOptionValues.FALL);
         } else if (
           event.key === "ArrowLeft" ||
+          event.key === "ArrowRight" ||
           event.key === "a" ||
           event.key === "A"
         ) {
@@ -222,6 +269,118 @@ function App() {
       </div>
     );
   }
+
+  const modeDescription = MODE_DESCRIPTIONS[session.practiceMode];
+
+  const renderModeInfo = () => {
+    if (session.practiceMode === "daily") {
+      return (
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-green-200 bg-green-50 p-3 dark:border-green-900/40 dark:bg-green-900/20">
+          <div className="text-center">
+            <p className="text-xs text-green-700 dark:text-green-300">今日得分</p>
+            <p className="text-lg font-semibold text-green-800 dark:text-green-100">{session.dailyScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-green-700 dark:text-green-300">历史最高</p>
+            <p className="text-lg font-semibold text-green-800 dark:text-green-100">{session.dailyHighScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-green-700 dark:text-green-300">当前题号</p>
+            <p className="text-lg font-semibold text-green-800 dark:text-green-100">
+              {session.currentEventIndex + 1}/{session.totalEvents}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (session.practiceMode === "challenge") {
+      return (
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-purple-200 bg-purple-50 p-3 dark:border-purple-900/40 dark:bg-purple-900/20">
+          <div className="text-center">
+            <p className="text-xs text-purple-700 dark:text-purple-300">本轮连胜</p>
+            <p className="text-lg font-semibold text-purple-800 dark:text-purple-100">{session.challengeCurrentScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-purple-700 dark:text-purple-300">上轮得分</p>
+            <p className="text-lg font-semibold text-purple-800 dark:text-purple-100">{session.challengeScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-purple-700 dark:text-purple-300">历史最佳</p>
+            <p className="text-lg font-semibold text-purple-800 dark:text-purple-100">{session.challengeBestScore}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-900/20">
+        <div className="text-center">
+          <p className="text-xs text-blue-700 dark:text-blue-300">累计作答</p>
+          <p className="text-lg font-semibold text-blue-800 dark:text-blue-100">{session.totalAttempts}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-blue-700 dark:text-blue-300">当前连胜</p>
+          <p className="text-lg font-semibold text-blue-800 dark:text-blue-100">{session.currentStreak}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-blue-700 dark:text-blue-300">正确率</p>
+          <p className="text-lg font-semibold text-blue-800 dark:text-blue-100">{session.formattedAccuracy}</p>
+        </div>
+      </div>
+    );
+  };
+
+  const renderProgress = () => {
+    if (session.practiceMode === "casual") {
+      return (
+        <div className="mb-4 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+          休闲模式为随机抽题，无固定题组进度。
+        </div>
+      );
+    }
+
+    if (session.practiceMode === "daily") {
+      const progress = ((session.currentEventIndex + 1) / session.totalEvents) * 100;
+      return (
+        <div className="mb-4 rounded-lg border border-gray-200 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-900">
+          <div className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>每日挑战进度（按题组）</span>
+            <span>{session.currentEventIndex + 1}/{session.totalEvents}</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+            <motion.div
+              className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.35 }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    const challengeProgress = Math.min(
+      (session.challengeCurrentScore / CHALLENGE_PROGRESS_TARGET) * 100,
+      100
+    );
+    return (
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-900">
+        <div className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+          <span>挑战进度（目标 {CHALLENGE_PROGRESS_TARGET} 连胜）</span>
+          <span>{session.challengeCurrentScore}/{CHALLENGE_PROGRESS_TARGET}</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <motion.div
+            className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${challengeProgress}%` }}
+            transition={{ duration: 0.35 }}
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gray-50 dark:bg-gray-950">
@@ -314,55 +473,16 @@ function App() {
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">训练你的交易直觉</p>
           <p className="mt-1 text-xs text-gray-400">
-            快捷键: ↑涨 ↓跌 ←平 | 空格继续 | H统计 | O成就 | L历史 | R重置
+            快捷键: ↑涨 ↓跌 ←平 / →平 | 空格继续 | H统计 | O成就 | L历史 | R重置
           </p>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
             {auth.user
               ? `云端模式: ${auth.user.email ?? auth.user.id}`
-              : "匿名模式: 数据仅保存在当前浏览器"}
+              : "匿名模式: 数据会被记录用于题目难度校准"}
           </p>
           {(session.isCloudSyncing || wrongAnswers.isSyncing || achievements.isSyncing) && (
             <p className="mt-1 text-xs text-blue-500">正在同步云端数据...</p>
           )}
-
-          {session.practiceMode === "challenge" && session.challengeScore > 0 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="mt-3 inline-block rounded-lg bg-purple-100 px-4 py-2 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-            >
-              🎯 挑战得分: {session.challengeScore}
-            </motion.div>
-          )}
-
-          {session.practiceMode === "daily" && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="mt-3 inline-block rounded-lg bg-green-100 px-4 py-2 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-            >
-              📅 今日得分: {session.dailyScore} | 最高: {session.dailyHighScore}
-            </motion.div>
-          )}
-
-          <div className="mx-auto mt-4 max-w-xs">
-            <div className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>练习进度</span>
-              <span>
-                {session.currentEventIndex + 1}/{session.totalEvents}
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${((session.currentEventIndex + 1) / session.totalEvents) * 100}%`,
-                }}
-                transition={{ duration: 0.5 }}
-              />
-            </div>
-          </div>
         </div>
 
         <ModeSelector
@@ -370,6 +490,33 @@ function App() {
           onModeChange={session.changeMode}
           isVisible={!session.showResult}
         />
+
+        {!session.showResult && (
+          <>
+            <p className="mb-3 text-center text-sm text-gray-600 dark:text-gray-300">{modeDescription}</p>
+            {renderModeInfo()}
+            {renderProgress()}
+
+            {session.practiceMode === "daily" && (
+              <LeaderboardPanel
+                title="每日挑战排行榜"
+                subtitle={`日期 ${session.dailyDate} · 取每位用户当日最高分`}
+                entries={dailyLeaderboard}
+                isLoading={leaderboardLoading}
+                error={leaderboardError}
+              />
+            )}
+            {session.practiceMode === "challenge" && (
+              <LeaderboardPanel
+                title="挑战模式排行榜"
+                subtitle="按历史最高分排名"
+                entries={challengeLeaderboard}
+                isLoading={leaderboardLoading}
+                error={leaderboardError}
+              />
+            )}
+          </>
+        )}
 
         <StockFilter
           selectedCategory={session.selectedCategory}
@@ -421,7 +568,7 @@ function App() {
                 </p>
               </div>
 
-              <div className="space-y-4 px-10">
+              <div className="space-y-4 px-6 sm:px-10">
                 {Object.values(PredictionOptionValues).map((option) => (
                   <PredictionButton
                     key={option}

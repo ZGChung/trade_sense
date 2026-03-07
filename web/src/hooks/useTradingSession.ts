@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import type { User } from "@supabase/supabase-js";
 import type {
   PredictionOption,
   TradingSessionState,
@@ -18,9 +19,11 @@ import {
 import { eventService } from "../services/eventService";
 import type { UserStats } from "../services/userService";
 import { userService } from "../services/userService";
+import { trackLeaderboardScore, trackPracticeAttempt } from "../services/analyticsService";
 
 const STORAGE_KEY = "tradesense_stats";
 const MODE_STORAGE_KEY = "tradesense_mode";
+const CHALLENGE_BEST_SCORE_KEY = "tradesense_challenge_best_score";
 
 interface StoredStats {
   totalAttempts: number;
@@ -67,6 +70,28 @@ function saveStats(stats: StoredStats): void {
   }
 }
 
+function loadChallengeBestScore(): number {
+  try {
+    const raw = localStorage.getItem(CHALLENGE_BEST_SCORE_KEY);
+    if (!raw) {
+      return 0;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  } catch (error) {
+    console.warn("Failed to load challenge best score:", error);
+    return 0;
+  }
+}
+
+function saveChallengeBestScore(score: number): void {
+  try {
+    localStorage.setItem(CHALLENGE_BEST_SCORE_KEY, String(score));
+  } catch (error) {
+    console.warn("Failed to save challenge best score:", error);
+  }
+}
+
 function mergeStats(localStats: StoredStats, remoteStats: UserStats | null): StoredStats {
   if (!remoteStats) {
     return localStats;
@@ -84,11 +109,23 @@ function getTodayDateString(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-export function useTradingSession(userId?: string | null) {
+function createChallengeRunId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `challenge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function useTradingSession(user?: Pick<User, "id" | "email" | "user_metadata"> | null) {
+  const userId = user?.id ?? null;
+
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(loadStoredMode);
   const [selectedCategory, setSelectedCategory] = useState<StockCategory | "全部">("全部");
   const [searchQuery, setSearchQuery] = useState("");
+
   const [challengeScore, setChallengeScore] = useState(0);
+  const [challengeCurrentScore, setChallengeCurrentScore] = useState(0);
+  const [challengeBestScore, setChallengeBestScore] = useState(loadChallengeBestScore);
 
   const [dailyDate, setDailyDate] = useState(() => getDailyChallengeInfo().date);
   const [dailyScore, setDailyScore] = useState(0);
@@ -99,8 +136,11 @@ export function useTradingSession(userId?: string | null) {
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventLoadError, setEventLoadError] = useState<string | null>(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
 
   const cloudSyncReadyRef = useRef(false);
+  const questionPresentedAtRef = useRef(Date.now());
+  const challengeRunIdRef = useRef(createChallengeRunId());
 
   const [state, setState] = useState<TradingSessionState>(() => {
     const storedStats = loadStats();
@@ -202,6 +242,12 @@ export function useTradingSession(userId?: string | null) {
     });
   }, [state.totalAttempts, state.correctPredictions, state.currentStreak, state.maxStreak]);
 
+  useEffect(() => {
+    if (!state.showResult) {
+      questionPresentedAtRef.current = Date.now();
+    }
+  }, [state.currentEventGroup.id, state.currentEventIndex, state.showResult, practiceMode]);
+
   // Refresh daily challenge set when day rolls over.
   useEffect(() => {
     const info = getDailyChallengeInfo();
@@ -298,6 +344,12 @@ export function useTradingSession(userId?: string | null) {
 
   const makePrediction = useCallback(
     (prediction: PredictionOption) => {
+      const responseTimeMs = Math.max(0, Date.now() - questionPresentedAtRef.current);
+
+      let shouldIncrementDailyScore = false;
+      let practiceAttemptPayload: Parameters<typeof trackPracticeAttempt>[1] | null = null;
+      let finishedChallengeScore: number | null = null;
+
       setState((prev) => {
         const eventGroup =
           practiceMode === "daily"
@@ -328,16 +380,43 @@ export function useTradingSession(userId?: string | null) {
           vibrate("medium");
         }
 
-        if (practiceMode === "challenge" && !isCorrect) {
-          setChallengeScore(prev.totalAttempts);
-          playSound("success");
-          vibrate("heavy");
+        if (practiceMode === "challenge") {
+          if (isCorrect) {
+            setChallengeCurrentScore((score) => score + 1);
+          } else {
+            finishedChallengeScore = challengeCurrentScore;
+            setChallengeScore(challengeCurrentScore);
+            setChallengeCurrentScore(0);
+            if (challengeCurrentScore > challengeBestScore) {
+              setChallengeBestScore(challengeCurrentScore);
+              saveChallengeBestScore(challengeCurrentScore);
+            }
+            challengeRunIdRef.current = createChallengeRunId();
+            playSound("success");
+            vibrate("heavy");
+          }
         }
+
+        if (practiceMode === "daily" && isCorrect) {
+          shouldIncrementDailyScore = true;
+        }
+
+        practiceAttemptPayload = {
+          mode: practiceMode,
+          eventGroupId: eventGroup.id,
+          userPrediction: prediction,
+          correctAnswer,
+          isCorrect,
+          responseTimeMs,
+          challengeRunId: practiceMode === "challenge" ? challengeRunIdRef.current : undefined,
+          dailyDate: practiceMode === "daily" ? dailyDate : undefined,
+          occurredAt: new Date().toISOString(),
+        };
 
         return {
           ...prev,
           currentEventGroup: eventGroup,
-          currentEventIndex: practiceMode === "daily" ? dailyEventIndex : 0,
+          currentEventIndex: practiceMode === "daily" ? dailyEventIndex : prev.currentEventIndex,
           userPrediction: prediction,
           totalAttempts: prev.totalAttempts + 1,
           correctPredictions: newCorrectPredictions,
@@ -347,7 +426,7 @@ export function useTradingSession(userId?: string | null) {
         };
       });
 
-      if (practiceMode === "daily") {
+      if (shouldIncrementDailyScore) {
         setDailyScore((prev) => {
           const newScore = prev + 1;
           if (saveDailyHighScore(newScore)) {
@@ -356,8 +435,29 @@ export function useTradingSession(userId?: string | null) {
           return newScore;
         });
       }
+
+      if (practiceAttemptPayload) {
+        void trackPracticeAttempt(user ?? null, practiceAttemptPayload);
+      }
+
+      if (finishedChallengeScore !== null) {
+        void trackLeaderboardScore(user ?? null, {
+          mode: "challenge",
+          score: finishedChallengeScore,
+        }).then(() => {
+          setLeaderboardRefreshKey((prev) => prev + 1);
+        });
+      }
     },
-    [practiceMode, dailyEvents, dailyEventIndex]
+    [
+      practiceMode,
+      dailyEvents,
+      dailyEventIndex,
+      dailyDate,
+      challengeCurrentScore,
+      challengeBestScore,
+      user,
+    ]
   );
 
   const nextEvent = useCallback(() => {
@@ -369,6 +469,17 @@ export function useTradingSession(userId?: string | null) {
 
       let nextIndex = dailyEventIndex + 1;
       if (nextIndex >= totalDailyEvents) {
+        const completedDailyScore = dailyScore;
+        if (completedDailyScore >= 0) {
+          void trackLeaderboardScore(user ?? null, {
+            mode: "daily",
+            score: completedDailyScore,
+            scoreDate: dailyDate,
+          }).then(() => {
+            setLeaderboardRefreshKey((prev) => prev + 1);
+          });
+        }
+
         nextIndex = 0;
         setDailyScore(0);
       }
@@ -387,17 +498,28 @@ export function useTradingSession(userId?: string | null) {
 
     setState((prev) => ({
       ...prev,
-      currentEventIndex: 0,
       userPrediction: null,
       showResult: false,
     }));
     void loadRandomEvent(selectedCategory, searchQuery);
-  }, [practiceMode, dailyEvents, dailyEventIndex, loadRandomEvent, selectedCategory, searchQuery]);
+  }, [
+    practiceMode,
+    dailyEvents,
+    dailyEventIndex,
+    dailyScore,
+    dailyDate,
+    loadRandomEvent,
+    selectedCategory,
+    searchQuery,
+    user,
+  ]);
 
   const resetSession = useCallback(() => {
     setChallengeScore(0);
+    setChallengeCurrentScore(0);
     setDailyEventIndex(0);
     setDailyScore(0);
+    challengeRunIdRef.current = createChallengeRunId();
 
     setState((prev) => ({
       ...prev,
@@ -428,8 +550,10 @@ export function useTradingSession(userId?: string | null) {
     (mode: PracticeMode) => {
       setPracticeMode(mode);
       setChallengeScore(0);
+      setChallengeCurrentScore(0);
       setDailyEventIndex(0);
       setDailyScore(0);
+      challengeRunIdRef.current = createChallengeRunId();
 
       if (mode === "daily") {
         if (dailyEvents.length === 0) {
@@ -491,7 +615,10 @@ export function useTradingSession(userId?: string | null) {
 
   return {
     ...state,
-    totalEvents: practiceMode === "daily" ? Math.max(dailyEvents.length, 1) : state.currentEventGroup.events.length,
+    totalEvents:
+      practiceMode === "daily"
+        ? Math.max(dailyEvents.length, 1)
+        : state.currentEventGroup.events.length,
     accuracy,
     formattedAccuracy,
     makePrediction,
@@ -505,10 +632,14 @@ export function useTradingSession(userId?: string | null) {
     selectedCategory,
     searchQuery,
     challengeScore,
+    challengeCurrentScore,
+    challengeBestScore,
     dailyScore,
     dailyHighScore,
+    dailyDate,
     isLoadingEvents,
     eventLoadError,
     isCloudSyncing,
+    leaderboardRefreshKey,
   };
 }

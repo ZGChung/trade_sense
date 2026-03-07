@@ -1,6 +1,8 @@
 import type { HistoricalEvent, PredictionOption } from "../models/types";
 
 const AI_SETTINGS_KEY = "tradesense_ai_settings_v1";
+const AI_CACHE_KEY = "tradesense_ai_cache_v1";
+const AI_CACHE_LIMIT = 120;
 
 export type AIProviderMode = "gemini-free" | "user-key";
 export type UserAIProvider = "deepseek" | "openai" | "gemini";
@@ -18,6 +20,17 @@ export interface AIExplanationResult {
   source: "gemini-free" | "user-key" | "static-template";
   providerLabel: string;
   errorMessage?: string;
+}
+
+interface CachedExplanation {
+  key: string;
+  text: string;
+  source: AIExplanationResult["source"];
+  providerLabel: string;
+  errorMessage?: string;
+  hits: number;
+  createdAt: number;
+  lastAccessedAt: number;
 }
 
 const DEFAULT_SETTINGS: AISettings = {
@@ -63,8 +76,104 @@ function truncateText(text: string, maxChars = 260): string {
   return `${text.slice(0, maxChars)}...`;
 }
 
+function normalizeCacheRows(raw: unknown): CachedExplanation[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .map((item) => item as Partial<CachedExplanation>)
+    .filter((item) => typeof item.key === "string" && typeof item.text === "string")
+    .map((item) => ({
+      key: item.key!,
+      text: item.text!,
+      source:
+        item.source === "user-key" || item.source === "static-template" || item.source === "gemini-free"
+          ? item.source
+          : "static-template",
+      providerLabel: typeof item.providerLabel === "string" ? item.providerLabel : "缓存结果",
+      errorMessage: typeof item.errorMessage === "string" ? item.errorMessage : undefined,
+      hits: typeof item.hits === "number" && item.hits > 0 ? Math.floor(item.hits) : 1,
+      createdAt: typeof item.createdAt === "number" ? item.createdAt : Date.now(),
+      lastAccessedAt: typeof item.lastAccessedAt === "number" ? item.lastAccessedAt : Date.now(),
+    }));
+}
+
 class AIService {
   private readonly freeGeminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+  private loadCache(): Map<string, CachedExplanation> {
+    const parsed = parseJSONSafely<unknown>(localStorage.getItem(AI_CACHE_KEY));
+    const normalized = normalizeCacheRows(parsed);
+    return new Map(normalized.map((entry) => [entry.key, entry]));
+  }
+
+  private persistCache(cache: Map<string, CachedExplanation>): void {
+    const rows = Array.from(cache.values());
+    localStorage.setItem(AI_CACHE_KEY, JSON.stringify(rows));
+  }
+
+  private buildCacheKey(events: HistoricalEvent[], stockName: string, scenario: "correct" | "wrong"): string {
+    const signature = events
+      .map((event) => `${event.id}|${event.date}|${event.description}`)
+      .join("||");
+    return `${stockName}::${scenario}::${signature}`;
+  }
+
+  private getCachedExplanation(cacheKey: string): AIExplanationResult | null {
+    const cache = this.loadCache();
+    const found = cache.get(cacheKey);
+    if (!found) {
+      return null;
+    }
+
+    const next: CachedExplanation = {
+      ...found,
+      hits: found.hits + 1,
+      lastAccessedAt: Date.now(),
+    };
+    cache.set(cacheKey, next);
+    this.persistCache(cache);
+
+    return {
+      text: found.text,
+      source: found.source,
+      providerLabel: found.providerLabel,
+      errorMessage: found.errorMessage,
+    };
+  }
+
+  private setCachedExplanation(cacheKey: string, result: AIExplanationResult): void {
+    const cache = this.loadCache();
+    const now = Date.now();
+    const existing = cache.get(cacheKey);
+
+    cache.set(cacheKey, {
+      key: cacheKey,
+      text: result.text,
+      source: result.source,
+      providerLabel: result.providerLabel,
+      errorMessage: result.errorMessage,
+      hits: existing ? existing.hits + 1 : 1,
+      createdAt: existing?.createdAt ?? now,
+      lastAccessedAt: now,
+    });
+
+    if (cache.size > AI_CACHE_LIMIT) {
+      const candidates = Array.from(cache.values()).sort((a, b) => {
+        if (a.hits !== b.hits) {
+          return a.hits - b.hits;
+        }
+        return a.lastAccessedAt - b.lastAccessedAt;
+      });
+      const removeCount = cache.size - AI_CACHE_LIMIT;
+      for (let i = 0; i < removeCount; i += 1) {
+        cache.delete(candidates[i].key);
+      }
+    }
+
+    this.persistCache(cache);
+  }
 
   getSettings(): AISettings {
     const parsed = parseJSONSafely<Partial<AISettings>>(localStorage.getItem(AI_SETTINGS_KEY));
@@ -261,6 +370,13 @@ class AIService {
     userPrediction: PredictionOption,
     actualPerformance: number
   ): Promise<AIExplanationResult> {
+    const scenario: "correct" | "wrong" = userPrediction === correctAnswer ? "correct" : "wrong";
+    const cacheKey = this.buildCacheKey(events, stockName, scenario);
+    const cached = this.getCachedExplanation(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const settings = this.getSettings();
     const prompt = this.buildPrompt(events, stockName, correctAnswer, userPrediction, actualPerformance);
     const providerErrors: string[] = [];
@@ -272,31 +388,37 @@ class AIService {
       try {
         if (source === "gemini-free") {
           const text = await this.callGemini(this.freeGeminiApiKey, prompt);
-          return {
+          const result: AIExplanationResult = {
             text,
             source: "gemini-free",
             providerLabel: "Gemini 2.5 Flash-Lite (免费)",
           };
+          this.setCachedExplanation(cacheKey, result);
+          return result;
         }
 
         const text = await this.callUserProvider(settings, prompt);
-        return {
+        const result: AIExplanationResult = {
           text,
           source: "user-key",
           providerLabel: `用户 Key (${settings.userProvider.toUpperCase()})`,
         };
+        this.setCachedExplanation(cacheKey, result);
+        return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         providerErrors.push(message);
       }
     }
 
-    return {
+    const fallbackResult: AIExplanationResult = {
       text: this.buildStaticFallback(events, actualPerformance),
       source: "static-template",
       providerLabel: "静态模板兜底",
       errorMessage: providerErrors.length > 0 ? providerErrors.join(" | ") : undefined,
     };
+    this.setCachedExplanation(cacheKey, fallbackResult);
+    return fallbackResult;
   }
 }
 
