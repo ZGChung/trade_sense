@@ -365,13 +365,12 @@ function App() {
       </button>
 
       <div className="fixed right-4 top-4 z-40 flex items-start gap-3">
-        <div className="max-w-[240px] rounded-xl border border-gray-200 bg-white/95 px-3 py-2 text-xs text-gray-600 shadow-md dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300">
-          {auth.user
-            ? `云端模式: ${auth.user.email ?? auth.user.id}`
-            : "匿名模式: 数据会被记录用于题目难度校准。"}
-          {(session.isCloudSyncing || wrongAnswers.isSyncing || achievements.isSyncing) && (
-            <p className="mt-1 text-blue-500">正在同步云端数据...</p>
-          )}
+        <div
+          className={`pt-2 text-sm font-semibold ${
+            auth.user ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"
+          }`}
+        >
+          {auth.user ? auth.user.email ?? auth.user.id : "游客模式"}
         </div>
 
         <div className="flex flex-col items-end gap-2">
@@ -517,13 +516,15 @@ function App() {
           />
         )}
 
-        <StockFilter
-          selectedCategory={session.selectedCategory}
-          onCategoryChange={session.changeCategory}
-          searchQuery={session.searchQuery}
-          onSearchChange={session.changeSearch}
-          searchDisabled={session.practiceMode !== "casual"}
-        />
+        <div className="mb-3">
+          <StockFilter
+            selectedCategory={session.selectedCategory}
+            onCategoryChange={session.changeCategory}
+            searchQuery={session.searchQuery}
+            onSearchChange={session.changeSearch}
+            searchDisabled={session.practiceMode !== "casual"}
+          />
+        </div>
 
         {session.eventLoadError && (
           <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
@@ -535,7 +536,7 @@ function App() {
           <div className="mb-4 text-center text-sm text-gray-500 dark:text-gray-400">正在拉取最新题目...</div>
         )}
 
-        <div className="space-y-6">
+        <div className="mt-8 space-y-6">
           <EventCard eventGroup={session.currentEventGroup} />
 
           {!session.showResult ? (
