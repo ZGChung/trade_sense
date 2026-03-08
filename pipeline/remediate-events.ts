@@ -51,6 +51,36 @@ function hasEnglishLetters(input: string): boolean {
   return /[A-Za-z]/.test(input);
 }
 
+function canonicalDescription(input: string): string {
+  return normalizeZhText(input)
+    .toLowerCase()
+    .replace(/[，。！？、：；,.!?;:]/g, "");
+}
+
+function splitUniqueEvents(events: EventRow[]): { unique: EventRow[]; duplicates: EventRow[] } {
+  const unique: EventRow[] = [];
+  const duplicates: EventRow[] = [];
+  const seen = new Set<string>();
+
+  for (const event of events) {
+    const key = canonicalDescription(event.description);
+    if (!key) {
+      duplicates.push(event);
+      continue;
+    }
+
+    if (seen.has(key)) {
+      duplicates.push(event);
+      continue;
+    }
+
+    seen.add(key);
+    unique.push(event);
+  }
+
+  return { unique, duplicates };
+}
+
 function pickRuleBasedSummary(stockName: string, englishText: string): string {
   const lower = englishText.toLowerCase();
 
@@ -76,6 +106,67 @@ function pickRuleBasedSummary(stockName: string, englishText: string): string {
   return `${stockName}出现重要公司消息，投资者关注其对业绩与估值的影响`;
 }
 
+function ensureUniqueGeminiEvents(
+  items: GeminiEvent[],
+  targetCount: number,
+  stockName: string
+): GeminiEvent[] {
+  const unique: GeminiEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const key = canonicalDescription(item.descriptionZh);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  const fallbackTemplates = [
+    `${stockName}公布阶段性经营更新，市场重新评估增长持续性`,
+    `${stockName}披露关键业务指标变化，资金调整中短期仓位`,
+    `${stockName}传出战略推进进展，投资者关注后续兑现节奏`,
+    `${stockName}出现经营预期修正信号，估值分歧有所放大`,
+    `${stockName}发布行业相关动态，市场风险偏好出现变化`,
+  ];
+
+  let idx = 0;
+  while (unique.length < targetCount) {
+    const baseDate = unique[unique.length - 1]?.date ?? new Date().toISOString().split("T")[0];
+    const candidate = fallbackTemplates[idx % fallbackTemplates.length];
+    idx += 1;
+
+    const key = canonicalDescription(candidate);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push({
+      date: shiftDate(baseDate, -1),
+      descriptionZh: candidate,
+    });
+  }
+
+  return unique.slice(0, targetCount);
+}
+
+function dedupeGeminiEvents(items: GeminiEvent[]): GeminiEvent[] {
+  const unique: GeminiEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const key = canonicalDescription(item.descriptionZh);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
 function buildFallbackEvents(
   stockName: string,
   seed: Array<{ date: string; description: string }>,
@@ -92,6 +183,8 @@ function buildFallbackEvents(
     `${stockName}发布阶段性经营更新，资金对短期基本面进行重新定价`,
     `${stockName}相关业务预期出现调整，市场分歧推动波动放大`,
     `${stockName}披露关键运营信号，投资者关注后续兑现节奏`,
+    `${stockName}释放经营改善迹象，市场开始重估未来盈利弹性`,
+    `${stockName}出现战略执行新进展，交易资金关注兑现节奏变化`,
   ];
 
   let idx = 0;
@@ -104,7 +197,7 @@ function buildFallbackEvents(
     idx += 1;
   }
 
-  return fallback.slice(0, targetCount);
+  return ensureUniqueGeminiEvents(fallback, targetCount, stockName);
 }
 
 function normalizeDate(input: string, fallback: string): string {
@@ -142,7 +235,7 @@ function buildPrompt(stockSymbol: string, stockName: string, existing: Array<{ d
     .map((event, index) => `${index + 1}. ${event.date} | ${event.description}`)
     .join("\n");
 
-  return `你是金融训练题库编辑。请将以下事件处理成中文题目素材。\n\n股票：${stockName} (${stockSymbol})\n现有事件：\n${lines}\n\n要求：\n1) 把现有事件全部翻译为简体中文（保留原本含义）；\n2) 如果数量不足 ${targetCount} 条，补充到 ${targetCount} 条；\n3) 每条事件 14~38 字；\n4) 日期用 YYYY-MM-DD；\n5) 仅输出 JSON，不要解释，不要 Markdown。\n\n输出格式：\n{\n  "events": [\n    {"date":"YYYY-MM-DD","description_zh":"中文事件描述"}\n  ]\n}\n\n注意：events 必须恰好 ${targetCount} 条。`;
+  return `你是金融训练题库编辑。请将以下事件处理成中文题目素材。\n\n股票：${stockName} (${stockSymbol})\n现有事件：\n${lines}\n\n要求：\n1) 把现有事件全部翻译为简体中文（保留原本含义）；\n2) 如果数量不足 ${targetCount} 条，补充到 ${targetCount} 条；\n3) 新增事件允许基于该公司业务进行仿写，但必须像真实新闻语句；\n4) 每条事件 14~38 字；\n5) 日期用 YYYY-MM-DD；\n6) 事件描述必须彼此不同，不能是重复句子。\n7) 仅输出 JSON，不要解释，不要 Markdown。\n\n输出格式：\n{\n  "events": [\n    {"date":"YYYY-MM-DD","description_zh":"中文事件描述"}\n  ]\n}\n\n注意：events 必须恰好 ${targetCount} 条且描述不可重复。`;
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
@@ -207,11 +300,12 @@ function parseGeminiEvents(rawText: string, targetCount: number, baseDate: strin
     })
     .filter((item): item is GeminiEvent => Boolean(item));
 
-  if (normalized.length < targetCount) {
-    throw new Error(`GEMINI_TOO_FEW_EVENTS:${normalized.length}`);
+  const unique = dedupeGeminiEvents(normalized);
+  if (unique.length < targetCount) {
+    throw new Error(`GEMINI_TOO_FEW_EVENTS:${unique.length}`);
   }
 
-  return normalized.slice(0, targetCount);
+  return unique.slice(0, targetCount);
 }
 
 async function fetchAllAutoGroups(supabase: ReturnType<typeof createClient>): Promise<EventGroupRow[]> {
@@ -259,15 +353,17 @@ async function remediateGroup(
     return { updated: false, inserted: 0 };
   }
 
-  const needTranslation = events.some((event) => hasEnglishLetters(event.description));
-  const needTopup = events.length < MIN_EVENTS_PER_STOCK;
+  const { unique: uniqueEvents, duplicates } = splitUniqueEvents(events);
+  const needTranslation = uniqueEvents.some((event) => hasEnglishLetters(event.description));
+  const needTopup = uniqueEvents.length < MIN_EVENTS_PER_STOCK;
+  const needDedup = duplicates.length > 0;
 
-  if (!needTranslation && !needTopup) {
+  if (!needTranslation && !needTopup && !needDedup) {
     return { updated: false, inserted: 0 };
   }
 
-  const targetCount = Math.max(MIN_EVENTS_PER_STOCK, events.length);
-  const seed = events.map((event) => ({
+  const targetCount = Math.max(MIN_EVENTS_PER_STOCK, uniqueEvents.length);
+  const seed = uniqueEvents.map((event) => ({
     date: normalizeDate(event.event_date, new Date().toISOString().split("T")[0]),
     description: event.description,
   }));
@@ -280,7 +376,11 @@ async function remediateGroup(
     try {
       const prompt = buildPrompt(group.stock_symbol, group.stock_name, seed, targetCount);
       const output = await callGemini(geminiApiKey, prompt);
-      enriched = parseGeminiEvents(output, targetCount, seed[0]?.date ?? new Date().toISOString().split("T")[0]);
+      enriched = ensureUniqueGeminiEvents(
+        parseGeminiEvents(output, targetCount, seed[0]?.date ?? new Date().toISOString().split("T")[0]),
+        targetCount,
+        group.stock_name
+      );
       break;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -310,8 +410,8 @@ async function remediateGroup(
     }
   }
 
-  for (let index = 0; index < events.length; index += 1) {
-    const row = events[index];
+  for (let index = 0; index < uniqueEvents.length; index += 1) {
+    const row = uniqueEvents[index];
     const next = enriched[index];
 
     const { error } = await supabase
@@ -328,13 +428,21 @@ async function remediateGroup(
   }
 
   let inserted = 0;
-  if (targetCount > events.length) {
-    const basePerfRaw = events[0].actual_performance;
+  if (duplicates.length > 0) {
+    const duplicateIds = duplicates.map((event) => event.id);
+    const { error } = await supabase.from("events").delete().in("id", duplicateIds);
+    if (error) {
+      throw new Error(`Failed to delete duplicate events for ${group.stock_symbol}: ${error.message}`);
+    }
+  }
+
+  if (targetCount > uniqueEvents.length) {
+    const basePerfRaw = uniqueEvents[0].actual_performance;
     const basePerf = typeof basePerfRaw === "string" ? Number(basePerfRaw) : basePerfRaw;
     const safePerf = Number.isFinite(basePerf) ? Number(basePerf) : 0;
-    const safeDaysAfter = events[0].days_after_event ?? 1;
+    const safeDaysAfter = uniqueEvents[0].days_after_event ?? 1;
 
-    const extraRows = enriched.slice(events.length).map((event) => ({
+    const extraRows = enriched.slice(uniqueEvents.length).map((event) => ({
       event_group_id: group.id,
       description: event.descriptionZh,
       event_date: event.date,
@@ -380,10 +488,15 @@ async function main() {
       continue;
     }
 
-    const events = group.events ?? [];
-    const needTranslation = events.some((event) => hasEnglishLetters(event.description));
-    const needTopup = events.length > 0 && events.length < MIN_EVENTS_PER_STOCK;
-    if (needTranslation || needTopup) {
+    const events = (group.events ?? []).sort(
+      (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
+    );
+    const { unique, duplicates } = splitUniqueEvents(events);
+    const needTranslation = unique.some((event) => hasEnglishLetters(event.description));
+    const needTopup = unique.length > 0 && unique.length < MIN_EVENTS_PER_STOCK;
+    const needDedup = duplicates.length > 0;
+
+    if (needTranslation || needTopup || needDedup) {
       targets.push(group);
     }
     if (targets.length >= MAX_GROUPS) {

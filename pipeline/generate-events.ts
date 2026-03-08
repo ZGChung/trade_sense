@@ -72,6 +72,44 @@ function normalizeZhText(input: string): string {
   return input.replace(/\s+/g, " ").trim();
 }
 
+function canonicalDescription(input: string): string {
+  return normalizeZhText(input)
+    .toLowerCase()
+    .replace(/[，。！？、：；,.!?;:]/g, "");
+}
+
+function dedupeGeminiEvents(items: GeminiEvent[]): GeminiEvent[] {
+  const unique: GeminiEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const key = canonicalDescription(item.descriptionZh);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
+function dedupeNewsByTitle(items: NormalizedNews[]): NormalizedNews[] {
+  const unique: NormalizedNews[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const key = item.title.trim().toLowerCase();
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
 function extractJsonObject(text: string): string | null {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -86,7 +124,7 @@ function buildPrompt(symbol: string, stockName: string, seedEvents: SeedEvent[])
     .map((event, index) => `${index + 1}. ${event.date} | ${event.titleEn}`)
     .join("\n");
 
-  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n任务：\n1) 先把以上英文事件全部翻译成简体中文。\n2) 如果事件数量不足 ${MIN_EVENTS_PER_STOCK} 条，再补充到 ${MIN_EVENTS_PER_STOCK} 条，补充事件也要是中文、与该股票近期市场关注点相关。\n3) 禁止输出英文，禁止输出解释，禁止 Markdown。\n4) 每条事件描述控制在 14~38 字。\n5) 日期使用 YYYY-MM-DD。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}。`;
+  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n任务：\n1) 先把以上英文事件全部翻译成简体中文。\n2) 如果事件数量不足 ${MIN_EVENTS_PER_STOCK} 条，再补充到 ${MIN_EVENTS_PER_STOCK} 条，补充事件也要是中文、与该股票近期市场关注点相关。\n3) 允许仿写新增事件，但必须像真实新闻事件句式，且不能复述同一句。\n4) 禁止输出英文，禁止输出解释，禁止 Markdown。\n5) 每条事件描述控制在 14~38 字。\n6) 日期使用 YYYY-MM-DD。\n7) 所有事件描述必须互不重复。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}，且描述不可重复。`;
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
@@ -165,7 +203,7 @@ function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[]): GeminiEve
     })
     .filter((item): item is GeminiEvent => Boolean(item));
 
-  return normalized.slice(0, MIN_EVENTS_PER_STOCK);
+  return dedupeGeminiEvents(normalized).slice(0, MIN_EVENTS_PER_STOCK);
 }
 
 async function enrichEventsWithGemini(
@@ -244,8 +282,9 @@ async function buildGeneratedEventGroups(
     const sortedNews = [...items].sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
+    const uniqueNews = dedupeNewsByTitle(sortedNews);
 
-    const topNews = sortedNews.slice(0, Math.max(MIN_EVENTS_PER_STOCK, 1));
+    const topNews = uniqueNews.slice(0, Math.max(MIN_EVENTS_PER_STOCK, 1));
     if (topNews.length === 0) {
       continue;
     }
