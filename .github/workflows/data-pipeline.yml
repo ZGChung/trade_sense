@@ -36,8 +36,9 @@ jobs:
           [ -n "$SUPABASE_URL" ] || { echo "Missing secret: SUPABASE_URL"; exit 1; }
           [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || { echo "Missing secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
 
-      - name: Run daily quota-harvest pipeline
+      - name: Run daily quota-harvest ingestion
         working-directory: pipeline
+        continue-on-error: true
         env:
           STOCKDATA_API_KEY: ${{ secrets.STOCKDATA_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -45,7 +46,15 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PIPELINE_NEWS_REQUEST_BUDGET: "20"
           PIPELINE_PRICE_REQUEST_BUDGET: "80"
-        run: npm run run
+        run: npm run fetch:news && npm run fetch:prices && npm run generate:events
+
+      - name: Remediate existing auto events (translate + top-up)
+        working-directory: pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run remediate:events
 
   keep-alive:
     if: github.event_name == 'schedule' && github.event.schedule == '0 12 * * *'
