@@ -274,6 +274,7 @@ async function remediateGroup(
 
   let enriched: GeminiEvent[] = [];
   let lastError: Error | null = null;
+  let hitRateLimit = false;
 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
@@ -286,7 +287,8 @@ async function remediateGroup(
       const message = lastError.message;
 
       if (message.startsWith("GEMINI_HTTP_429")) {
-        await sleep(10000 * attempt);
+        hitRateLimit = true;
+        break;
       } else if (message.startsWith("GEMINI_HTTP_5")) {
         await sleep(2500 * attempt);
       } else if (attempt < 5) {
@@ -296,7 +298,7 @@ async function remediateGroup(
   }
 
   if (enriched.length < targetCount) {
-    if (lastError?.message?.startsWith("GEMINI_HTTP_429")) {
+    if (hitRateLimit || lastError?.message?.startsWith("GEMINI_HTTP_429")) {
       console.warn(
         `Gemini 429 for ${group.stock_symbol}, applying rule-based Chinese fallback.`
       );
