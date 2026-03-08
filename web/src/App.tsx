@@ -8,9 +8,8 @@ import { useAuth } from "./hooks/useAuth";
 import { EventCard } from "./components/EventCard";
 import { PredictionButton } from "./components/PredictionButton";
 import { ResultView } from "./components/ResultView";
-import { StatsView } from "./components/StatsView";
 import { ModeSelector, ModeBadge } from "./components/ModeSelector";
-import { AchievementBadge, AchievementToast } from "./components/AchievementBadge";
+import { AchievementToast } from "./components/AchievementBadge";
 import { AchievementPanel } from "./components/AchievementPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { WrongAnswersPanel } from "./components/WrongAnswersPanel";
@@ -22,6 +21,8 @@ import { AuthModal } from "./components/AuthModal";
 import { AISettingsPanel } from "./components/AISettingsPanel";
 import { SideMenu } from "./components/SideMenu";
 import { LeaderboardPanel } from "./components/LeaderboardPanel";
+import { StatsPanel } from "./components/StatsPanel";
+import { KeyboardShortcutsPanel } from "./components/KeyboardShortcutsPanel";
 import { useCountdown } from "./hooks/useCountdown";
 import {
   PredictionOption as PredictionOptionValues,
@@ -55,6 +56,7 @@ function App() {
   const [showAISettings, setShowAISettings] = useState(false);
   const [showSideMenu, setShowSideMenu] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("tradesense_darkmode");
@@ -346,7 +348,7 @@ function App() {
   };
 
   const topControlClass =
-    "inline-flex h-11 w-36 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white/95 px-3 text-sm font-semibold text-gray-700 shadow-md transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-800";
+    "inline-flex h-11 w-36 items-center justify-center rounded-xl border border-gray-200 bg-white/95 px-3 text-sm font-semibold text-gray-700 shadow-md transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-800";
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gray-50 dark:bg-gray-950">
@@ -362,43 +364,62 @@ function App() {
         </svg>
       </button>
 
-      <div className="fixed right-4 top-4 z-40 flex flex-col items-end gap-2">
-        {auth.isLoading ? (
-          <div className={`${topControlClass} cursor-not-allowed opacity-80`}>
-            登录状态加载中...
-          </div>
-        ) : auth.user ? (
+      <div className="fixed right-4 top-4 z-40 flex items-start gap-3">
+        <div className="max-w-[240px] rounded-xl border border-gray-200 bg-white/95 px-3 py-2 text-xs text-gray-600 shadow-md dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-300">
+          {auth.user
+            ? `云端模式: ${auth.user.email ?? auth.user.id}`
+            : "匿名模式: 数据会被记录用于题目难度校准。"}
+          {(session.isCloudSyncing || wrongAnswers.isSyncing || achievements.isSyncing) && (
+            <p className="mt-1 text-blue-500">正在同步云端数据...</p>
+          )}
+        </div>
+
+        <div className="flex flex-col items-end gap-2">
+          {auth.isLoading ? (
+            <div className={`${topControlClass} cursor-not-allowed opacity-80`}>
+              登录
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                if (auth.user) {
+                  void auth.signOut();
+                  return;
+                }
+                setShowAuthModal(true);
+              }}
+              className={topControlClass}
+              title={auth.user ? "点击退出登录" : "打开登录面板"}
+            >
+              登录
+            </button>
+          )}
+
           <button
-            onClick={() => void auth.signOut()}
+            onClick={() => setShowAchievements(true)}
+            className={topControlClass}
+            title={`成就 ${achievements.unlockedCount}/${achievements.totalCount}`}
+            aria-label={`成就 ${achievements.unlockedCount}/${achievements.totalCount}`}
+          >
+            成就
+          </button>
+
+          <button
+            onClick={toggleDarkMode}
+            className={topControlClass}
+            title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
+            aria-label={darkMode ? "切换到浅色模式" : "切换到深色模式"}
+          >
+            深色模式
+          </button>
+
+          <button
+            onClick={() => setShowShortcuts(true)}
             className={topControlClass}
           >
-            退出登录
+            快捷键
           </button>
-        ) : (
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className={topControlClass}
-          >
-            登录
-          </button>
-        )}
-
-        <AchievementBadge
-          count={achievements.unlockedCount}
-          total={achievements.totalCount}
-          onClick={() => setShowAchievements(true)}
-          className={topControlClass}
-        />
-
-        <button
-          onClick={toggleDarkMode}
-          className={topControlClass}
-          title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
-          aria-label={darkMode ? "切换到浅色模式" : "切换到深色模式"}
-        >
-          <span>{darkMode ? "☀️" : "🌙"}</span>
-          <span>{darkMode ? "浅色模式" : "深色模式"}</span>
-        </button>
+        </div>
       </div>
 
       <div className="container mx-auto max-w-2xl px-4 pt-14">
@@ -426,6 +447,20 @@ function App() {
         {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
       </AnimatePresence>
 
+      <KeyboardShortcutsPanel
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
+
+      <StatsPanel
+        isOpen={showStats}
+        onClose={() => setShowStats(false)}
+        totalAttempts={session.totalAttempts}
+        currentStreak={session.currentStreak}
+        maxStreak={session.maxStreak}
+        formattedAccuracy={session.formattedAccuracy}
+      />
+
       <div className="container mx-auto max-w-2xl px-4 py-6">
         <div className="mb-6 pt-4 text-center">
           <div className="mb-2 flex items-center justify-center gap-2">
@@ -433,17 +468,6 @@ function App() {
             <ModeBadge mode={session.practiceMode} />
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">训练你的交易直觉</p>
-          <p className="mt-1 text-xs text-gray-400">
-            快捷键: ↑涨 ↓跌 ←平 / →平 | 空格继续 | H统计 | O成就 | L历史 | R重置
-          </p>
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {auth.user
-              ? `云端模式: ${auth.user.email ?? auth.user.id}`
-              : "匿名模式: 数据会被记录用于题目难度校准"}
-          </p>
-          {(session.isCloudSyncing || wrongAnswers.isSyncing || achievements.isSyncing) && (
-            <p className="mt-1 text-xs text-blue-500">正在同步云端数据...</p>
-          )}
         </div>
 
         <ModeSelector
@@ -511,19 +535,6 @@ function App() {
           <div className="mb-4 text-center text-sm text-gray-500 dark:text-gray-400">正在拉取最新题目...</div>
         )}
 
-        <div
-          className={`mb-6 transition-all duration-500 ease-in-out ${
-            showStats ? "max-h-96 opacity-100" : "max-h-0 overflow-hidden opacity-0"
-          }`}
-        >
-          <StatsView
-            totalAttempts={session.totalAttempts}
-            currentStreak={session.currentStreak}
-            maxStreak={session.maxStreak}
-            formattedAccuracy={session.formattedAccuracy}
-          />
-        </div>
-
         <div className="space-y-6">
           <EventCard eventGroup={session.currentEventGroup} />
 
@@ -562,9 +573,8 @@ function App() {
         <SideMenu
           isOpen={showSideMenu}
           onClose={() => setShowSideMenu(false)}
-          showStats={showStats}
           wrongAnswersCount={wrongAnswers.getWrongAnswersCount()}
-          onToggleStats={() => setShowStats((prev) => !prev)}
+          onShowStats={() => setShowStats(true)}
           onShowHistory={() => setShowHistory(true)}
           onShowWrongAnswers={() => setShowWrongAnswers(true)}
           onShowAISettings={() => setShowAISettings(true)}

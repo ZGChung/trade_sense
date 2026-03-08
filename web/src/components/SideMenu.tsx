@@ -4,9 +4,8 @@ import type { ReactNode } from "react";
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  showStats: boolean;
   wrongAnswersCount: number;
-  onToggleStats: () => void;
+  onShowStats: () => void;
   onShowHistory: () => void;
   onShowWrongAnswers: () => void;
   onShowAISettings: () => void;
@@ -106,9 +105,8 @@ function ResetIcon() {
 export function SideMenu({
   isOpen,
   onClose,
-  showStats,
   wrongAnswersCount,
-  onToggleStats,
+  onShowStats,
   onShowHistory,
   onShowWrongAnswers,
   onShowAISettings,
@@ -146,9 +144,9 @@ export function SideMenu({
 
             <div className="space-y-1">
               <MenuButton
-                label={showStats ? "隐藏统计" : "显示统计"}
+                label="统计面板"
                 onClick={() => {
-                  onToggleStats();
+                  onShowStats();
                   onClose();
                 }}
                 icon={<ChartIcon />}
