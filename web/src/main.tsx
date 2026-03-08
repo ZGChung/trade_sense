@@ -5,7 +5,12 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 if (import.meta.env.PROD) {
-  registerSW({ immediate: true });
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      updateSW(true);
+    },
+  });
 }
 
 const root = document.getElementById("root");

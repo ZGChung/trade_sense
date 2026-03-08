@@ -11,7 +11,7 @@ interface AuthModalProps {
 type AuthMode = "sign-in" | "sign-up";
 
 function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\s@]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(email);
 }
 
 export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
@@ -79,11 +79,11 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
             onClick={onClose}
           />
 
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] grid place-items-center p-4">
             <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.2 }}
               className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
             >
@@ -145,6 +145,8 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="邮箱"
                     autoComplete="email"
+                    inputMode="email"
+                    required
                     className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
                   <input
@@ -153,6 +155,7 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="密码 (至少 6 位)"
                     autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+                    required
                     className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
                   {mode === "sign-up" && (
@@ -162,6 +165,7 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       placeholder="确认密码"
                       autoComplete="new-password"
+                      required
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                     />
                   )}
