@@ -280,7 +280,24 @@ function App() {
 
   const renderModeInfo = () => {
     if (session.practiceMode === "daily") {
-      return null;
+      return (
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-green-200 bg-green-50 p-3 dark:border-green-900/40 dark:bg-green-900/20">
+          <div className="text-center">
+            <p className="text-xs text-green-700 dark:text-green-300">今日得分</p>
+            <p className="text-lg font-semibold text-green-800 dark:text-green-100">{session.dailyScore}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-green-700 dark:text-green-300">当前题号</p>
+            <p className="text-lg font-semibold text-green-800 dark:text-green-100">
+              {Math.min(session.currentEventIndex + 1, session.totalEvents)}/{session.totalEvents}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-green-700 dark:text-green-300">今日题量</p>
+            <p className="text-lg font-semibold text-green-800 dark:text-green-100">{session.totalEvents}</p>
+          </div>
+        </div>
+      );
     }
 
     if (session.practiceMode === "challenge") {
@@ -438,9 +455,15 @@ function App() {
             }
           }}
           isVisible
-          showLeaderboardButton={session.practiceMode !== "casual"}
+          showLeaderboardButton
+          leaderboardDisabled={session.practiceMode === "casual"}
           leaderboardOpen={showLeaderboard}
-          onLeaderboardClick={() => setShowLeaderboard((prev) => !prev)}
+          onLeaderboardClick={() => {
+            if (session.practiceMode === "casual") {
+              return;
+            }
+            setShowLeaderboard((prev) => !prev);
+          }}
         />
 
         <p className="mb-3 text-center text-sm text-gray-600 dark:text-gray-300">{modeDescription}</p>
@@ -474,7 +497,8 @@ function App() {
           selectedCategory={session.selectedCategory}
           onCategoryChange={session.changeCategory}
           searchQuery={session.searchQuery}
-          onSearchChange={session.practiceMode === "casual" ? session.changeSearch : undefined}
+          onSearchChange={session.changeSearch}
+          searchDisabled={session.practiceMode !== "casual"}
         />
 
         {session.eventLoadError && (

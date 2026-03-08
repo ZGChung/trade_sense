@@ -9,6 +9,7 @@ interface ModeSelectorProps {
   onModeChange: (mode: PracticeMode) => void;
   isVisible?: boolean;
   showLeaderboardButton?: boolean;
+  leaderboardDisabled?: boolean;
   leaderboardOpen?: boolean;
   onLeaderboardClick?: () => void;
 }
@@ -32,6 +33,7 @@ export function ModeSelector({
   onModeChange,
   isVisible = true,
   showLeaderboardButton = false,
+  leaderboardDisabled = false,
   leaderboardOpen = false,
   onLeaderboardClick,
 }: ModeSelectorProps) {
@@ -82,8 +84,11 @@ export function ModeSelector({
         {showLeaderboardButton && onLeaderboardClick && (
           <button
             onClick={onLeaderboardClick}
+            disabled={leaderboardDisabled}
             className={`inline-flex h-11 min-w-[118px] items-center justify-center rounded-xl border px-4 text-sm font-semibold transition-colors ${
-              leaderboardOpen
+              leaderboardDisabled
+                ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500"
+                : leaderboardOpen
                 ? "border-indigo-400/70 bg-indigo-600 text-white"
                 : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
             }`}
