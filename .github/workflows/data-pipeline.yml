@@ -5,6 +5,15 @@ on:
     - cron: "10 0 * * *"  # Daily quota refresh run: 00:10 UTC
     - cron: "0 12 * * *"  # Daily keep-alive: 12:00 UTC
   workflow_dispatch:
+    inputs:
+      remediate_symbols:
+        description: "Optional, comma-separated stock symbols for targeted remediation (e.g. RDNT,TSLA)"
+        required: false
+        default: ""
+      remediate_max_groups:
+        description: "Optional, max auto groups to remediate this run"
+        required: false
+        default: "10000"
 
 jobs:
   quota-harvest-pipeline:
@@ -54,6 +63,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PIPELINE_REMEDIATE_SYMBOLS: ${{ github.event.inputs.remediate_symbols }}
+          PIPELINE_REMEDIATE_MAX_GROUPS: ${{ github.event.inputs.remediate_max_groups }}
+          PIPELINE_GEMINI_DELAY_MS: "6000"
         run: npm run remediate:events
 
   keep-alive:

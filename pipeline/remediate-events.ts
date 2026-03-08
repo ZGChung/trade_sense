@@ -26,6 +26,12 @@ const PAGE_SIZE = 200;
 const GEMINI_MODEL = process.env.PIPELINE_GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
 const GEMINI_DELAY_MS = Math.max(0, Number(process.env.PIPELINE_GEMINI_DELAY_MS ?? "4200"));
 const MAX_GROUPS = Math.max(1, Number(process.env.PIPELINE_REMEDIATE_MAX_GROUPS ?? "10000"));
+const TARGET_SYMBOLS = new Set(
+  (process.env.PIPELINE_REMEDIATE_SYMBOLS ?? process.env.PIPELINE_REMEDIATE_SYMBOL ?? "")
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean)
+);
 
 function getEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -213,7 +219,7 @@ async function remediateGroup(
   let enriched: GeminiEvent[] = [];
   let lastError: Error | null = null;
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
       const prompt = buildPrompt(group.stock_symbol, group.stock_name, seed, targetCount);
       const output = await callGemini(geminiApiKey, prompt);
@@ -224,10 +230,10 @@ async function remediateGroup(
       const message = lastError.message;
 
       if (message.startsWith("GEMINI_HTTP_429")) {
-        await sleep(6000 * attempt);
+        await sleep(10000 * attempt);
       } else if (message.startsWith("GEMINI_HTTP_5")) {
-        await sleep(1500 * attempt);
-      } else if (attempt < 3) {
+        await sleep(2500 * attempt);
+      } else if (attempt < 5) {
         await sleep(1000 * attempt);
       }
     }
@@ -305,6 +311,10 @@ async function main() {
   const targets: EventGroupRow[] = [];
 
   for (const group of groups) {
+    if (TARGET_SYMBOLS.size > 0 && !TARGET_SYMBOLS.has(group.stock_symbol.toUpperCase())) {
+      continue;
+    }
+
     const events = group.events ?? [];
     const needTranslation = events.some((event) => hasEnglishLetters(event.description));
     const needTopup = events.length > 0 && events.length < MIN_EVENTS_PER_STOCK;
