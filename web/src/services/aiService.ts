@@ -103,14 +103,22 @@ class AIService {
   private readonly freeGeminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 
   private loadCache(): Map<string, CachedExplanation> {
-    const parsed = parseJSONSafely<unknown>(localStorage.getItem(AI_CACHE_KEY));
-    const normalized = normalizeCacheRows(parsed);
-    return new Map(normalized.map((entry) => [entry.key, entry]));
+    try {
+      const parsed = parseJSONSafely<unknown>(localStorage.getItem(AI_CACHE_KEY));
+      const normalized = normalizeCacheRows(parsed);
+      return new Map(normalized.map((entry) => [entry.key, entry]));
+    } catch {
+      return new Map<string, CachedExplanation>();
+    }
   }
 
   private persistCache(cache: Map<string, CachedExplanation>): void {
-    const rows = Array.from(cache.values());
-    localStorage.setItem(AI_CACHE_KEY, JSON.stringify(rows));
+    try {
+      const rows = Array.from(cache.values());
+      localStorage.setItem(AI_CACHE_KEY, JSON.stringify(rows));
+    } catch {
+      // Swallow localStorage quota/security errors to avoid breaking explanation flow.
+    }
   }
 
   private buildCacheKey(events: HistoricalEvent[], stockName: string, scenario: "correct" | "wrong"): string {
