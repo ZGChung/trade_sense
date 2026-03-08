@@ -16,7 +16,6 @@ export interface UseAuthResult {
   clearAuthError: () => void;
   signInWithEmail: (payload: EmailAuthPayload) => Promise<void>;
   signUpWithEmail: (payload: EmailAuthPayload) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   isConfigured: boolean;
 }
@@ -123,29 +122,6 @@ export function useAuth(): UseAuthResult {
     [clearAuthError, ensureAuthEnabled]
   );
 
-  const signInWithGoogle = useCallback(async () => {
-    clearAuthError();
-    try {
-      ensureAuthEnabled();
-      const { error } = await supabase!.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      setAuthError(parseError(error, "Google 登录失败"));
-      throw error;
-    }
-  }, [clearAuthError, ensureAuthEnabled]);
-
   const signOut = useCallback(async () => {
     clearAuthError();
     try {
@@ -170,7 +146,6 @@ export function useAuth(): UseAuthResult {
     clearAuthError,
     signInWithEmail,
     signUpWithEmail,
-    signInWithGoogle,
     signOut,
     isConfigured: isSupabaseConfigured,
   };

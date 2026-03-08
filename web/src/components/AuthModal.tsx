@@ -48,18 +48,6 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
     }
   };
 
-  const onGoogleSignIn = async () => {
-    resetMessages();
-    setIsSubmitting(true);
-    try {
-      await auth.signInWithGoogle();
-    } catch {
-      // Error is surfaced by authError.
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -72,13 +60,14 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
             onClick={onClose}
           />
 
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className="fixed left-1/2 top-1/2 z-[60] w-[92%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
-          >
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+            >
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">账号登录</h2>
@@ -155,20 +144,6 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                   </button>
                 </form>
 
-                <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
-                  <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-                  或者
-                  <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-                </div>
-
-                <button
-                  onClick={onGoogleSignIn}
-                  disabled={isSubmitting}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                >
-                  使用 Google 登录
-                </button>
-
                 {(localMessage || auth.authError) && (
                   <div
                     className={`mt-4 rounded-lg p-3 text-sm ${
@@ -182,7 +157,8 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                 )}
               </>
             )}
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
