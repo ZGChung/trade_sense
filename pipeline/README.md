@@ -5,6 +5,7 @@
 - `npm run fetch:news`：抓取一周新闻
 - `npm run fetch:prices`：抓取相关新闻股票价格窗口
 - `npm run generate:events`：生成 `event_groups/events` 并可写入 Supabase
+- `npm run remediate:events`：修复历史 `source=auto` 数据（翻译为中文并补齐到至少 3 条事件）
 - `npm run seed`：把 `web/src/models/mockData.ts` 导入 Supabase
 
 ## 环境变量
