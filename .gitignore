@@ -1,69 +1,30 @@
-# Xcode
-.DS_Store
-*/build/*
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata/
-*.xccheckout
-*.moved-aside
-DerivedData/
-*.hmap
-*.ipa
-*.xcuserstate
-
-# Swift Package Manager
-.build/
-Packages/
-
-# App specific
-TradeSense.app/
-TradeSense.xcworkspace/
-
-# macOS
+# System
 .DS_Store
 .AppleDouble
 .LSOverride
 
-# iOS
-*.mode1v3
-*.mode2v3
-*.moved-aside
-*.pbxuser
-*.perspectivev3
-*.xcuserstate
-
-# Other
+# Editor
 *.swp
 *.swo
 *~
 
-# SwiftPM
-.Package.swift.swp
-.swiftpm/
-
-# API Configuration (Security)
-TradeSense/Config/config.plist
-config.plist
-
-# Sensitive files
+# Secrets
 *.key
 *.secret
 
 # Web app
 web/node_modules/
 web/dist/
+web/.vite/
+web/coverage/
 web/.env
 web/.env.local
 web/.env.*.local
 
-# Vite
-web/.vite/
-
 # Data pipeline
 pipeline/node_modules/
+pipeline/.env
+pipeline/.env.local
+
+# Misc logs
+*.log

@@ -308,7 +308,7 @@ function parseGeminiEvents(rawText: string, targetCount: number, baseDate: strin
   return unique.slice(0, targetCount);
 }
 
-async function fetchAllAutoGroups(supabase: ReturnType<typeof createClient>): Promise<EventGroupRow[]> {
+async function fetchAllAutoGroups(supabase: any): Promise<EventGroupRow[]> {
   const all: EventGroupRow[] = [];
   let from = 0;
 
@@ -341,7 +341,7 @@ async function fetchAllAutoGroups(supabase: ReturnType<typeof createClient>): Pr
 }
 
 async function remediateGroup(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   geminiApiKey: string,
   group: EventGroupRow
 ): Promise<{ updated: boolean; inserted: number }> {
@@ -473,7 +473,7 @@ async function main() {
   const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
   const geminiApiKey = getEnv("GEMINI_API_KEY");
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  const supabase: any = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

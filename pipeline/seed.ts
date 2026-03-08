@@ -10,7 +10,7 @@ function getEnv(name: string): string {
 }
 
 async function ensureEventGroup(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   stockSymbol: string,
   stockName: string,
   category: string
@@ -53,7 +53,7 @@ async function seed() {
   const supabaseUrl = getEnv("SUPABASE_URL");
   const serviceRole = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  const supabase = createClient(supabaseUrl, serviceRole, {
+  const supabase: any = createClient(supabaseUrl, serviceRole, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -80,8 +80,12 @@ async function seed() {
       throw new Error(`Failed to query events for ${group.stockSymbol}: ${existingError.message}`);
     }
 
+    const normalizedExistingEvents = (existingEvents ?? []) as Array<{
+      description: string;
+      event_date: string;
+    }>;
     const existingKeys = new Set(
-      (existingEvents ?? []).map((item) => `${item.description}::${item.event_date}`)
+      normalizedExistingEvents.map((item) => `${item.description}::${item.event_date}`)
     );
 
     const rows = group.events
