@@ -10,10 +10,15 @@ interface AuthModalProps {
 
 type AuthMode = "sign-in" | "sign-up";
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
 
@@ -26,20 +31,34 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
     event.preventDefault();
     resetMessages();
 
-    if (!email.trim() || !password.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password.trim()) {
       setLocalMessage("请输入邮箱和密码");
+      return;
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      setLocalMessage("请输入正确的邮箱格式");
+      return;
+    }
+    if (mode === "sign-up" && password !== confirmPassword) {
+      setLocalMessage("两次输入的密码不一致");
+      return;
+    }
+    if (password.length < 6) {
+      setLocalMessage("密码长度至少 6 位");
       return;
     }
 
     setIsSubmitting(true);
     try {
       if (mode === "sign-in") {
-        await auth.signInWithEmail({ email: email.trim(), password });
+        await auth.signInWithEmail({ email: normalizedEmail, password });
         setLocalMessage("登录成功，正在同步你的数据...");
         onClose();
       } else {
-        await auth.signUpWithEmail({ email: email.trim(), password });
-        setLocalMessage("注册成功，请检查邮箱验证链接后登录。");
+        await auth.signUpWithEmail({ email: normalizedEmail, password });
+        setLocalMessage("注册成功，已自动登录。");
+        onClose();
       }
     } catch {
       // Error is surfaced by authError.
@@ -92,6 +111,7 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                   <button
                     onClick={() => {
                       setMode("sign-in");
+                      setConfirmPassword("");
                       resetMessages();
                     }}
                     className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -105,6 +125,7 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                   <button
                     onClick={() => {
                       setMode("sign-up");
+                      setConfirmPassword("");
                       resetMessages();
                     }}
                     className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -134,6 +155,16 @@ export function AuthModal({ isOpen, onClose, auth }: AuthModalProps) {
                     autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
                     className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
+                  {mode === "sign-up" && (
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="确认密码"
+                      autoComplete="new-password"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    />
+                  )}
 
                   <button
                     type="submit"

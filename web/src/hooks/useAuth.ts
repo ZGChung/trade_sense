@@ -110,9 +110,15 @@ export function useAuth(): UseAuthResult {
       clearAuthError();
       try {
         ensureAuthEnabled();
-        const { error } = await supabase!.auth.signUp({ email, password });
+        const { data, error } = await supabase!.auth.signUp({ email, password });
         if (error) {
           throw error;
+        }
+        if (!data.session) {
+          const { error: signInError } = await supabase!.auth.signInWithPassword({ email, password });
+          if (signInError) {
+            throw new Error("当前仍启用邮箱验证。请在 Supabase Auth 设置里关闭 Confirm email。");
+          }
         }
       } catch (error) {
         setAuthError(parseError(error, "邮箱注册失败"));
