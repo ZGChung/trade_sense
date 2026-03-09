@@ -135,7 +135,7 @@ describe("aiService fallback", () => {
       VITE_MINIMAX_BASE_URL: "https://api.minimax.io/v1",
     });
 
-    const fetchMock = vi.fn().mockImplementation(async (input: any) => {
+    const fetchMock = vi.fn().mockImplementation(async (input: Parameters<typeof fetch>[0]) => {
       const url = String(input);
       if (url.includes("generativelanguage.googleapis.com")) {
         return {
