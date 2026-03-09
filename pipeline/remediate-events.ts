@@ -25,12 +25,18 @@ const MIN_EVENTS_PER_STOCK = 3;
 const PAGE_SIZE = 200;
 const GEMINI_MODEL = process.env.PIPELINE_GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
 const GEMINI_DELAY_MS = Math.max(0, Number(process.env.PIPELINE_GEMINI_DELAY_MS ?? "4200"));
-const MINIMAX_MODEL = process.env.PIPELINE_MINIMAX_MODEL?.trim() || process.env.MINIMAX_MODEL?.trim() || "MiniMax-M2.5";
-const MINIMAX_BASE_URL =
-  (process.env.PIPELINE_MINIMAX_BASE_URL?.trim() || process.env.MINIMAX_BASE_URL?.trim() || "https://api.minimax.io/v1").replace(
-    /\/+$/,
-    ""
-  );
+const MINIMAX_MODEL =
+  process.env.PIPELINE_MINIMAX_MODEL?.trim() || process.env.MINIMAX_MODEL?.trim() || "MiniMax-M2.5";
+const MINIMAX_OPENAI_BASE_URL = (
+  process.env.PIPELINE_MINIMAX_BASE_URL?.trim() ||
+  process.env.MINIMAX_BASE_URL?.trim() ||
+  "https://api.minimax.io/v1"
+).replace(/\/+$/, "");
+const MINIMAX_ANTHROPIC_BASE_URL = (
+  process.env.PIPELINE_MINIMAX_ANTHROPIC_BASE_URL?.trim() ||
+  process.env.MINIMAX_ANTHROPIC_BASE_URL?.trim() ||
+  "https://api.minimax.io/anthropic"
+).replace(/\/+$/, "");
 const MAX_GROUPS = Math.max(1, Number(process.env.PIPELINE_REMEDIATE_MAX_GROUPS ?? "10000"));
 const TARGET_SYMBOLS = new Set(
   (process.env.PIPELINE_REMEDIATE_SYMBOLS ?? process.env.PIPELINE_REMEDIATE_SYMBOL ?? "")
@@ -305,8 +311,8 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
   return text;
 }
 
-async function callMinimax(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch(`${MINIMAX_BASE_URL}/chat/completions`, {
+async function callMinimaxOpenAI(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(`${MINIMAX_OPENAI_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -335,6 +341,65 @@ async function callMinimax(apiKey: string, prompt: string): Promise<string> {
   }
 
   return text;
+}
+
+async function callMinimaxAnthropic(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(`${MINIMAX_ANTHROPIC_BASE_URL}/v1/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // Anthropic-compatible auth headers (MiniMax supports this interface, including Coding Plan keys).
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: MINIMAX_MODEL,
+      max_tokens: 700,
+      temperature: 0.2,
+      system: "You are a helpful assistant.",
+      messages: [{ role: "user", content: [{ type: "text", text: prompt }] }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`MINIMAX_HTTP_${response.status}:${errorText}`);
+  }
+
+  const data = (await response.json()) as {
+    content?: Array<{ type?: string; text?: string }>;
+  };
+
+  const text =
+    (data.content ?? [])
+      .filter((block) => block && block.type === "text" && typeof block.text === "string")
+      .map((block) => block.text!.trim())
+      .filter(Boolean)
+      .join("\n")
+      .trim() || "";
+
+  if (!text) {
+    throw new Error("MINIMAX_EMPTY_RESPONSE");
+  }
+
+  return text;
+}
+
+async function callMinimax(apiKey: string, prompt: string): Promise<string> {
+  // Coding Plan keys (often `sk-cp-...`) are documented to work via the Anthropic-compatible interface.
+  if (apiKey.trim().startsWith("sk-cp-")) {
+    return callMinimaxAnthropic(apiKey, prompt);
+  }
+
+  try {
+    return await callMinimaxOpenAI(apiKey, prompt);
+  } catch (error) {
+    // Fallback to Anthropic interface if OpenAI-compatible auth fails (common when key type differs).
+    if (error instanceof Error && error.message.includes("MINIMAX_HTTP_401")) {
+      return callMinimaxAnthropic(apiKey, prompt);
+    }
+    throw error;
+  }
 }
 
 async function callLLM(config: { provider: LLMProvider; apiKey: string }, prompt: string): Promise<string> {
