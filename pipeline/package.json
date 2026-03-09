@@ -8,6 +8,7 @@
     "fetch:prices": "tsx fetch-prices.ts",
     "generate:events": "tsx generate-events.ts",
     "remediate:events": "tsx remediate-events.ts",
+    "audit:events": "tsx audit-events.ts",
     "seed": "tsx seed.ts",
     "run": "npm run fetch:news && npm run fetch:prices && npm run generate:events && npm run remediate:events"
   },

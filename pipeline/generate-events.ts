@@ -72,6 +72,45 @@ function normalizeZhText(input: string): string {
   return input.replace(/\s+/g, " ").trim();
 }
 
+function withTickerPrefix(symbol: string, description: string): string {
+  const trimmed = description.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.toUpperCase().includes(symbol.toUpperCase())) {
+    return trimmed;
+  }
+  return `${symbol}：${trimmed}`;
+}
+
+function normalizeHaystack(title: string, description: string): string {
+  return `${title} ${description}`.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeEntityName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[\u2019'".,()]/g, " ")
+    .replace(
+      /\b(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|holdings?|group|sa|ag|nv|spa)\b/g,
+      " "
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isRelevantNewsItem(symbol: string, symbolName: string, item: NormalizedNews): boolean {
+  const haystack = normalizeHaystack(item.title, item.description || item.title);
+  if (haystack.includes(symbol.toLowerCase())) {
+    return true;
+  }
+
+  const normalizedName = normalizeEntityName(symbolName);
+  if (normalizedName.length >= 4 && haystack.includes(normalizedName)) {
+    return true;
+  }
+
+  return false;
+}
+
 function canonicalDescription(input: string): string {
   return normalizeZhText(input)
     .toLowerCase()
@@ -124,7 +163,7 @@ function buildPrompt(symbol: string, stockName: string, seedEvents: SeedEvent[])
     .map((event, index) => `${index + 1}. ${event.date} | ${event.titleEn}`)
     .join("\n");
 
-  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n任务：\n1) 先把以上英文事件全部翻译成简体中文。\n2) 如果事件数量不足 ${MIN_EVENTS_PER_STOCK} 条，再补充到 ${MIN_EVENTS_PER_STOCK} 条，补充事件也要是中文、与该股票近期市场关注点相关。\n3) 允许仿写新增事件，但必须像真实新闻事件句式，且不能复述同一句。\n4) 禁止输出英文，禁止输出解释，禁止 Markdown。\n5) 每条事件描述控制在 14~38 字。\n6) 日期使用 YYYY-MM-DD。\n7) 所有事件描述必须互不重复。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}，且描述不可重复。`;
+  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n任务：\n1) 先把以上英文事件全部翻译成简体中文。\n2) 如果事件数量不足 ${MIN_EVENTS_PER_STOCK} 条，再补充到 ${MIN_EVENTS_PER_STOCK} 条，补充事件也要是中文、与该股票近期市场关注点相关。\n3) 允许仿写新增事件，但必须像真实新闻事件句式，且不能复述同一句。\n4) 每条事件描述必须包含股票代码 ${symbol}，建议以“${symbol}：”开头。\n5) 除股票代码外禁止输出英文，禁止输出解释，禁止 Markdown。\n6) 每条事件描述控制在 14~38 字。\n7) 日期使用 YYYY-MM-DD。\n8) 所有事件描述必须互不重复。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}，且描述不可重复。`;
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
@@ -163,7 +202,7 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
   return text;
 }
 
-function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[]): GeminiEvent[] {
+function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[], symbol: string): GeminiEvent[] {
   if (!raw || typeof raw !== "object") {
     return [];
   }
@@ -187,6 +226,11 @@ function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[]): GeminiEve
 
       const descriptionZh = normalizeZhText(row.description_zh);
       if (!descriptionZh) {
+        return null;
+      }
+
+      // Ensure each event is explicitly tied to the stock to avoid confusing cross-symbol contamination.
+      if (!descriptionZh.toUpperCase().includes(symbol.toUpperCase())) {
         return null;
       }
 
@@ -220,7 +264,7 @@ async function enrichEventsWithGemini(
       const text = await callGemini(apiKey, prompt);
       const jsonText = extractJsonObject(text) ?? text;
       const parsed = JSON.parse(jsonText) as unknown;
-      const normalized = normalizeGeminiEvents(parsed, seedEvents);
+      const normalized = normalizeGeminiEvents(parsed, seedEvents, symbol);
 
       if (normalized.length >= MIN_EVENTS_PER_STOCK) {
         return normalized.slice(0, MIN_EVENTS_PER_STOCK);
@@ -284,7 +328,10 @@ async function buildGeneratedEventGroups(
     );
     const uniqueNews = dedupeNewsByTitle(sortedNews);
 
-    const topNews = uniqueNews.slice(0, Math.max(MIN_EVENTS_PER_STOCK, 1));
+    const symbolName = uniqueNews[0]?.symbolName || symbol;
+    const relevantNews = uniqueNews.filter((item) => isRelevantNewsItem(symbol, symbolName, item));
+
+    const topNews = relevantNews.slice(0, Math.max(MIN_EVENTS_PER_STOCK, 1));
     if (topNews.length === 0) {
       continue;
     }
@@ -299,15 +346,15 @@ async function buildGeneratedEventGroups(
       const enrichedEvents = await enrichEventsWithGemini(
         geminiApiKey,
         symbol,
-        topNews[0]?.symbolName || symbol,
+        symbolName,
         seedEvents
       );
 
       const events: GeneratedEvent[] = enrichedEvents.map((item, index) => ({
-        description: item.descriptionZh,
+        description: withTickerPrefix(symbol, item.descriptionZh),
         eventDate: item.date,
         stockSymbol: symbol,
-        stockName: topNews[0]?.symbolName || symbol,
+        stockName: symbolName,
         actualPerformance: price.performance,
         daysAfterEvent: 1,
         sourceUrl: seedEvents[index]?.sourceUrl ?? "",
@@ -320,7 +367,7 @@ async function buildGeneratedEventGroups(
 
       result.push({
         stockSymbol: symbol,
-        stockName: topNews[0]?.symbolName || symbol,
+        stockName: symbolName,
         category: "其他",
         source: "auto",
         events,

@@ -45,6 +45,46 @@ function isQuotaError(code?: string, message?: string): boolean {
   return haystack.includes("limit") || haystack.includes("quota") || haystack.includes("too many");
 }
 
+function normalizeHaystack(title: string, description: string): string {
+  return `${title} ${description}`.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeEntityName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[\u2019'".,()]/g, " ")
+    .replace(
+      /\b(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|holdings?|group|sa|ag|nv|spa)\b/g,
+      " "
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function entityMatchesItem(entity: { symbol?: string; name?: string }, item: StockDataNewsItem): boolean {
+  const symbol = entity.symbol?.trim();
+  if (!symbol) {
+    return false;
+  }
+
+  const haystack = normalizeHaystack(item.title, item.description || item.title);
+  if (haystack.includes(symbol.toLowerCase())) {
+    return true;
+  }
+
+  const name = entity.name?.trim();
+  if (!name) {
+    return false;
+  }
+
+  const normalizedName = normalizeEntityName(name);
+  if (normalizedName.length < 4) {
+    return false;
+  }
+
+  return haystack.includes(normalizedName);
+}
+
 function normalizeBatch(items: StockDataNewsItem[]): NormalizedNews[] {
   return items
     .flatMap((item) => {
@@ -56,9 +96,9 @@ function normalizeBatch(items: StockDataNewsItem[]): NormalizedNews[] {
 
         // Prefer equities by default, but keep anything when type is missing.
         if (!entity.type) {
-          return true;
+          return entityMatchesItem(entity, item);
         }
-        return entity.type === "equity";
+        return entity.type === "equity" && entityMatchesItem(entity, item);
       });
 
       if (entities.length === 0) {

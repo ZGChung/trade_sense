@@ -57,6 +57,15 @@ function canonicalDescription(input: string): string {
     .replace(/[，。！？、：；,.!?;:]/g, "");
 }
 
+function withTickerPrefix(stockSymbol: string, description: string): string {
+  const trimmed = description.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.toUpperCase().includes(stockSymbol.toUpperCase())) {
+    return trimmed;
+  }
+  return `${stockSymbol}：${trimmed}`;
+}
+
 function splitUniqueEvents(events: EventRow[]): { unique: EventRow[]; duplicates: EventRow[] } {
   const unique: EventRow[] = [];
   const duplicates: EventRow[] = [];
@@ -235,7 +244,7 @@ function buildPrompt(stockSymbol: string, stockName: string, existing: Array<{ d
     .map((event, index) => `${index + 1}. ${event.date} | ${event.description}`)
     .join("\n");
 
-  return `你是金融训练题库编辑。请将以下事件处理成中文题目素材。\n\n股票：${stockName} (${stockSymbol})\n现有事件：\n${lines}\n\n要求：\n1) 把现有事件全部翻译为简体中文（保留原本含义）；\n2) 如果数量不足 ${targetCount} 条，补充到 ${targetCount} 条；\n3) 新增事件允许基于该公司业务进行仿写，但必须像真实新闻语句；\n4) 每条事件 14~38 字；\n5) 日期用 YYYY-MM-DD；\n6) 事件描述必须彼此不同，不能是重复句子。\n7) 仅输出 JSON，不要解释，不要 Markdown。\n\n输出格式：\n{\n  "events": [\n    {"date":"YYYY-MM-DD","description_zh":"中文事件描述"}\n  ]\n}\n\n注意：events 必须恰好 ${targetCount} 条且描述不可重复。`;
+  return `你是金融训练题库编辑。请将以下事件处理成中文题目素材。\n\n股票：${stockName} (${stockSymbol})\n现有事件：\n${lines}\n\n要求：\n1) 把现有事件全部翻译为简体中文（保留原本含义）；\n2) 如果数量不足 ${targetCount} 条，补充到 ${targetCount} 条；\n3) 新增事件允许基于该公司业务进行仿写，但必须像真实新闻语句；\n4) 每条事件必须包含股票代码 ${stockSymbol}，建议以“${stockSymbol}：”开头；\n5) 每条事件 14~38 字；\n6) 日期用 YYYY-MM-DD；\n7) 事件描述必须彼此不同，不能是重复句子；\n8) 仅输出 JSON，不要解释，不要 Markdown。\n\n输出格式：\n{\n  "events": [\n    {"date":"YYYY-MM-DD","description_zh":"中文事件描述"}\n  ]\n}\n\n注意：events 必须恰好 ${targetCount} 条且描述不可重复。`;
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
@@ -274,7 +283,7 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
   return text;
 }
 
-function parseGeminiEvents(rawText: string, targetCount: number, baseDate: string): GeminiEvent[] {
+function parseGeminiEvents(rawText: string, targetCount: number, baseDate: string, stockSymbol: string): GeminiEvent[] {
   const jsonText = extractJsonObject(rawText) ?? rawText;
   const parsed = JSON.parse(jsonText) as { events?: Array<{ date?: string; description_zh?: string }> };
 
@@ -290,6 +299,9 @@ function parseGeminiEvents(rawText: string, targetCount: number, baseDate: strin
 
       const descriptionZh = normalizeZhText(item.description_zh);
       if (!descriptionZh) {
+        return null;
+      }
+      if (!descriptionZh.toUpperCase().includes(stockSymbol.toUpperCase())) {
         return null;
       }
 
@@ -377,7 +389,12 @@ async function remediateGroup(
       const prompt = buildPrompt(group.stock_symbol, group.stock_name, seed, targetCount);
       const output = await callGemini(geminiApiKey, prompt);
       enriched = ensureUniqueGeminiEvents(
-        parseGeminiEvents(output, targetCount, seed[0]?.date ?? new Date().toISOString().split("T")[0]),
+        parseGeminiEvents(
+          output,
+          targetCount,
+          seed[0]?.date ?? new Date().toISOString().split("T")[0],
+          group.stock_symbol
+        ),
         targetCount,
         group.stock_name
       );
@@ -409,6 +426,11 @@ async function remediateGroup(
       );
     }
   }
+
+  enriched = enriched.map((item) => ({
+    ...item,
+    descriptionZh: withTickerPrefix(group.stock_symbol, item.descriptionZh),
+  }));
 
   for (let index = 0; index < uniqueEvents.length; index += 1) {
     const row = uniqueEvents[index];
