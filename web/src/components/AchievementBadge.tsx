@@ -30,21 +30,26 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
         initial={{ opacity: 0, y: -100, scale: 0.8 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -100, scale: 0.8 }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
+        className="fixed inset-x-0 top-4 z-50 flex justify-center px-4"
       >
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 dark:from-yellow-600 dark:to-orange-700 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
-          <span className="text-4xl">{achievement.icon}</span>
-          <div>
+        <div className="w-[min(560px,calc(100vw-2rem))] min-w-[18rem] rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-4 text-white shadow-2xl dark:from-yellow-600 dark:to-orange-700">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20 text-2xl leading-none">
+              {achievement.icon}
+            </div>
+            <div className="min-w-0 flex-1">
             <p className="text-xs uppercase tracking-wider opacity-90">成就解锁!</p>
-            <p className="font-bold text-lg">{achievement.title}</p>
-            <p className="text-sm opacity-90">{achievement.description}</p>
+              <p className="text-lg font-bold leading-snug">{achievement.title}</p>
+              <p className="text-sm leading-snug opacity-90">{achievement.description}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 rounded-md p-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="关闭成就提示"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="ml-2 text-white/80 hover:text-white transition-colors"
-          >
-            ✕
-          </button>
         </div>
       </motion.div>
     </AnimatePresence>

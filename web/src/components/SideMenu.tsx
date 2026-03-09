@@ -4,6 +4,15 @@ import type { ReactNode } from "react";
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  userLabel: string;
+  authLoading: boolean;
+  isLoggedIn: boolean;
+  onAuthClick: () => void;
+  achievementsLabel: string;
+  onShowAchievements: () => void;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
+  onShowShortcuts: () => void;
   wrongAnswersCount: number;
   onShowStats: () => void;
   onShowHistory: () => void;
@@ -18,9 +27,10 @@ interface MenuButtonProps {
   icon: ReactNode;
   variant?: "default" | "danger";
   badge?: number;
+  detail?: string;
 }
 
-function MenuButton({ label, onClick, icon, variant = "default", badge }: MenuButtonProps) {
+function MenuButton({ label, onClick, icon, variant = "default", badge, detail }: MenuButtonProps) {
   const isDanger = variant === "danger";
 
   return (
@@ -36,11 +46,14 @@ function MenuButton({ label, onClick, icon, variant = "default", badge }: MenuBu
         <span className="inline-flex h-5 w-5 items-center justify-center">{icon}</span>
         <span className="text-sm font-medium">{label}</span>
       </span>
-      {typeof badge === "number" && badge > 0 && (
-        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-300">
-          {badge}
-        </span>
-      )}
+      <span className="flex items-center gap-2">
+        {detail ? <span className="text-xs text-gray-500 dark:text-gray-400">{detail}</span> : null}
+        {typeof badge === "number" && badge > 0 && (
+          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-300">
+            {badge}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
@@ -102,9 +115,64 @@ function ResetIcon() {
   );
 }
 
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M8 4h8v3a4 4 0 0 1-8 0V4z" />
+      <path d="M6 4H4a2 2 0 0 0 2 2" />
+      <path d="M18 4h2a2 2 0 0 1-2 2" />
+      <path d="M12 11v3" />
+      <path d="M9 21h6" />
+      <path d="M10 14h4" />
+    </svg>
+  );
+}
+
+function ThemeIcon({ darkMode }: { darkMode: boolean }) {
+  return darkMode ? (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 3v2" />
+      <path d="M12 19v2" />
+      <path d="M4.2 5.8 5.6 7.2" />
+      <path d="M18.4 16.8 19.8 18.2" />
+      <path d="M3 12h2" />
+      <path d="M19 12h2" />
+      <path d="M4.2 18.2 5.6 16.8" />
+      <path d="M18.4 7.2 19.8 5.8" />
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M21 12.3A7.2 7.2 0 1 1 11.7 3a6 6 0 0 0 9.3 9.3z" />
+    </svg>
+  );
+}
+
+function KeyboardIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="7" width="18" height="10" rx="2" />
+      <path d="M7 11h.01" />
+      <path d="M10 11h.01" />
+      <path d="M13 11h.01" />
+      <path d="M16 11h.01" />
+      <path d="M7 14h10" />
+    </svg>
+  );
+}
+
 export function SideMenu({
   isOpen,
   onClose,
+  userLabel,
+  authLoading,
+  isLoggedIn,
+  onAuthClick,
+  achievementsLabel,
+  onShowAchievements,
+  darkMode,
+  onToggleDarkMode,
+  onShowShortcuts,
   wrongAnswersCount,
   onShowStats,
   onShowHistory,
@@ -140,6 +208,59 @@ export function SideMenu({
               >
                 ✕
               </button>
+            </div>
+
+            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-950/40">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">当前账户</p>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">{userLabel}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    onAuthClick();
+                    onClose();
+                  }}
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    authLoading
+                      ? "cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      : isLoggedIn
+                        ? "bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                  disabled={authLoading}
+                >
+                  {authLoading ? "加载中" : isLoggedIn ? "退出" : "登录"}
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                <MenuButton
+                  label="成就"
+                  detail={achievementsLabel}
+                  onClick={() => {
+                    onShowAchievements();
+                    onClose();
+                  }}
+                  icon={<TrophyIcon />}
+                />
+                <MenuButton
+                  label={darkMode ? "切换到浅色模式" : "切换到深色模式"}
+                  onClick={() => {
+                    onToggleDarkMode();
+                    onClose();
+                  }}
+                  icon={<ThemeIcon darkMode={darkMode} />}
+                />
+                <MenuButton
+                  label="快捷键"
+                  onClick={() => {
+                    onShowShortcuts();
+                    onClose();
+                  }}
+                  icon={<KeyboardIcon />}
+                />
+              </div>
             </div>
 
             <div className="space-y-1">

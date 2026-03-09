@@ -348,9 +348,6 @@ function App() {
     );
   };
 
-  const topControlClass =
-    "inline-flex h-11 w-36 items-center justify-center rounded-xl border border-gray-200 bg-white/95 px-3 text-sm font-semibold text-gray-700 shadow-md transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200 dark:hover:bg-gray-800";
-
   return (
     <div className="min-h-screen overflow-x-hidden bg-gray-50 dark:bg-gray-950">
       <button
@@ -364,63 +361,6 @@ function App() {
           <path d="M4 17h16" />
         </svg>
       </button>
-
-      <div className="fixed right-4 top-4 z-40 flex items-start gap-3">
-        <div
-          className={`pt-2 text-sm font-semibold ${
-            auth.user ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"
-          }`}
-        >
-          {auth.user ? auth.user.email ?? auth.user.id : "游客模式"}
-        </div>
-
-        <div className="flex flex-col items-end gap-2">
-          {auth.isLoading ? (
-            <div className={`${topControlClass} cursor-not-allowed opacity-80`}>
-              登录
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                if (auth.user) {
-                  void auth.signOut();
-                  return;
-                }
-                setShowAuthModal(true);
-              }}
-              className={topControlClass}
-              title={auth.user ? "点击退出登录" : "打开登录面板"}
-            >
-              登录
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowAchievements(true)}
-            className={topControlClass}
-            title={`成就 ${achievements.unlockedCount}/${achievements.totalCount}`}
-            aria-label={`成就 ${achievements.unlockedCount}/${achievements.totalCount}`}
-          >
-            成就
-          </button>
-
-          <button
-            onClick={toggleDarkMode}
-            className={topControlClass}
-            title={darkMode ? "切换到浅色模式" : "切换到深色模式"}
-            aria-label={darkMode ? "切换到浅色模式" : "切换到深色模式"}
-          >
-            深色模式
-          </button>
-
-          <button
-            onClick={() => setShowShortcuts(true)}
-            className={topControlClass}
-          >
-            快捷键
-          </button>
-        </div>
-      </div>
 
       <div className="container mx-auto max-w-2xl px-4 pt-14">
         <WelcomeBanner />
@@ -575,6 +515,21 @@ function App() {
         <SideMenu
           isOpen={showSideMenu}
           onClose={() => setShowSideMenu(false)}
+          userLabel={auth.user ? auth.user.email ?? auth.user.id : "游客模式"}
+          authLoading={auth.isLoading}
+          isLoggedIn={Boolean(auth.user)}
+          onAuthClick={() => {
+            if (auth.user) {
+              void auth.signOut();
+              return;
+            }
+            setShowAuthModal(true);
+          }}
+          achievementsLabel={`${achievements.unlockedCount}/${achievements.totalCount}`}
+          onShowAchievements={() => setShowAchievements(true)}
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          onShowShortcuts={() => setShowShortcuts(true)}
           wrongAnswersCount={wrongAnswers.getWrongAnswersCount()}
           onShowStats={() => setShowStats(true)}
           onShowHistory={() => setShowHistory(true)}
