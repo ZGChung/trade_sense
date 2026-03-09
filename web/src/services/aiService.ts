@@ -17,7 +17,7 @@ export interface AISettings {
 
 export interface AIExplanationResult {
   text: string;
-  source: "gemini-free" | "user-key" | "static-template";
+  source: "gemini-free" | "minimax-fallback" | "user-key" | "static-template";
   providerLabel: string;
   errorMessage?: string;
 }
@@ -88,7 +88,10 @@ function normalizeCacheRows(raw: unknown): CachedExplanation[] {
       key: item.key!,
       text: item.text!,
       source:
-        item.source === "user-key" || item.source === "static-template" || item.source === "gemini-free"
+        item.source === "user-key" ||
+        item.source === "static-template" ||
+        item.source === "gemini-free" ||
+        item.source === "minimax-fallback"
           ? item.source
           : "static-template",
       providerLabel: typeof item.providerLabel === "string" ? item.providerLabel : "缓存结果",
@@ -99,8 +102,30 @@ function normalizeCacheRows(raw: unknown): CachedExplanation[] {
     }));
 }
 
+type AIEnv = Record<string, string | undefined>;
+
 class AIService {
-  private readonly freeGeminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+  private readonly env: AIEnv;
+
+  constructor(env: AIEnv = import.meta.env as unknown as AIEnv) {
+    this.env = env;
+  }
+
+  private get freeGeminiApiKey(): string {
+    return this.env.VITE_GEMINI_API_KEY?.trim() || "";
+  }
+
+  private get minimaxApiKey(): string {
+    return this.env.VITE_MINIMAX_API_KEY?.trim() || "";
+  }
+
+  private get minimaxModel(): string {
+    return this.env.VITE_MINIMAX_MODEL?.trim() || "MiniMax-M2.5";
+  }
+
+  private get minimaxBaseUrl(): string {
+    return this.env.VITE_MINIMAX_BASE_URL?.trim() || "https://api.minimax.io/v1";
+  }
 
   private loadCache(): Map<string, CachedExplanation> {
     try {
@@ -231,7 +256,7 @@ class AIService {
 
   private async callGemini(apiKey: string, prompt: string, model = "gemini-2.5-flash-lite"): Promise<string> {
     if (!apiKey) {
-      throw new AIProviderError("Gemini API Key 未配置");
+      return this.callGeminiProxy(prompt, model);
     }
 
     const response = await fetch(
@@ -265,6 +290,33 @@ class AIService {
       throw new AIProviderError("Gemini 返回为空");
     }
 
+    return text;
+  }
+
+  private async callGeminiProxy(prompt: string, model: string): Promise<string> {
+    const response = await fetch("/api/gemini-explain", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt,
+        model,
+        temperature: 0.6,
+        maxOutputTokens: 240,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new AIProviderError(`Gemini 请求失败: ${truncateText(errorText)}`, response.status);
+    }
+
+    const data = (await response.json()) as { text?: string };
+    const text = data.text?.trim();
+    if (!text) {
+      throw new AIProviderError("Gemini 返回为空");
+    }
     return text;
   }
 
@@ -355,6 +407,53 @@ class AIService {
     return this.callDeepSeek(settings.userApiKey, prompt, model, settings.userBaseUrl);
   }
 
+  private isRateLimitError(error: unknown): boolean {
+    return error instanceof AIProviderError && error.statusCode === 429;
+  }
+
+  private async callMinimaxFallback(prompt: string): Promise<string> {
+    if (!this.minimaxApiKey) {
+      return this.callMinimaxProxy(prompt);
+    }
+
+    const endpoint = `${this.minimaxBaseUrl.replace(/\/+$/, "")}/chat/completions`;
+    try {
+      return await this.callOpenAI(this.minimaxApiKey, prompt, this.minimaxModel, endpoint);
+    } catch (error) {
+      if (error instanceof AIProviderError) {
+        throw new AIProviderError(error.message.replace(/^OpenAI\b/, "MiniMax"), error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  private async callMinimaxProxy(prompt: string): Promise<string> {
+    const response = await fetch("/api/minimax-explain", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt,
+        model: this.minimaxModel,
+        temperature: 0.6,
+        max_tokens: 240,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new AIProviderError(`MiniMax 请求失败: ${truncateText(errorText)}`, response.status);
+    }
+
+    const data = (await response.json()) as { text?: string };
+    const text = data.text?.trim();
+    if (!text) {
+      throw new AIProviderError("MiniMax 返回为空");
+    }
+    return text;
+  }
+
   private buildStaticFallback(events: HistoricalEvent[], actualPerformance: number): string {
     const finalEvent = events[events.length - 1] ?? events[0];
     const percent = (actualPerformance * 100).toFixed(1);
@@ -390,11 +489,11 @@ class AIService {
     const providerErrors: string[] = [];
 
     const providerOrder: Array<"gemini-free" | "user-key"> =
-      settings.mode === "user-key" ? ["user-key", "gemini-free"] : ["gemini-free", "user-key"];
+      settings.mode === "user-key" ? ["user-key", "gemini-free"] : ["gemini-free"];
 
     for (const source of providerOrder) {
-      try {
-        if (source === "gemini-free") {
+      if (source === "gemini-free") {
+        try {
           const text = await this.callGemini(this.freeGeminiApiKey, prompt);
           const result: AIExplanationResult = {
             text,
@@ -403,8 +502,30 @@ class AIService {
           };
           this.setCachedExplanation(cacheKey, result);
           return result;
-        }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          providerErrors.push(message);
 
+          if (this.isRateLimitError(error)) {
+            try {
+              const minimaxText = await this.callMinimaxFallback(prompt);
+              const minimaxResult: AIExplanationResult = {
+                text: minimaxText,
+                source: "minimax-fallback",
+                providerLabel: `MiniMax ${this.minimaxModel} (Coding Plan 兜底)`,
+              };
+              this.setCachedExplanation(cacheKey, minimaxResult);
+              return minimaxResult;
+            } catch (minimaxError) {
+              const minimaxMessage = minimaxError instanceof Error ? minimaxError.message : String(minimaxError);
+              providerErrors.push(minimaxMessage);
+            }
+          }
+        }
+        continue;
+      }
+
+      try {
         const text = await this.callUserProvider(settings, prompt);
         const result: AIExplanationResult = {
           text,
@@ -430,4 +551,8 @@ class AIService {
   }
 }
 
-export const aiService = new AIService();
+export function createAIService(env?: AIEnv): AIService {
+  return new AIService(env);
+}
+
+export const aiService = createAIService();

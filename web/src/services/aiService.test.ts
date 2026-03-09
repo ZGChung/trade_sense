@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { aiService } from "./aiService";
+import { createAIService } from "./aiService";
 import { PredictionOption } from "../models/types";
 import type { HistoricalEvent } from "../models/types";
 
@@ -45,6 +45,7 @@ describe("aiService cache", () => {
 
   it("reuses cached API explanation for same question + same scenario", async () => {
     setUserProviderSettings();
+    const aiService = createAIService({});
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -78,6 +79,7 @@ describe("aiService cache", () => {
 
   it("keeps only two cache scenarios per question (correct/wrong)", async () => {
     setUserProviderSettings();
+    const aiService = createAIService({});
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -115,6 +117,57 @@ describe("aiService cache", () => {
       0.034
     );
 
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("aiService fallback", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("falls back to MiniMax proxy when Gemini is rate-limited", async () => {
+    const service = createAIService({
+      VITE_GEMINI_API_KEY: "fake-gemini",
+      VITE_MINIMAX_API_KEY: "",
+      VITE_MINIMAX_MODEL: "MiniMax-M2.5",
+      VITE_MINIMAX_BASE_URL: "https://api.minimax.io/v1",
+    });
+
+    const fetchMock = vi.fn().mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.includes("generativelanguage.googleapis.com")) {
+        return {
+          ok: false,
+          status: 429,
+          text: async () => "rate limited",
+        };
+      }
+
+      if (url === "/api/minimax-explain") {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ text: "MiniMax 兜底解释" }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch url: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await service.explainPredictionResult(
+      events,
+      "Apple",
+      PredictionOption.RISE,
+      PredictionOption.FALL,
+      0.034
+    );
+
+    expect(result.source).toBe("minimax-fallback");
+    expect(result.text).toBe("MiniMax 兜底解释");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
