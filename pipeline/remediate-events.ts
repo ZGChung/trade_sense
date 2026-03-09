@@ -50,6 +50,8 @@ const TARGET_SYMBOLS = new Set(
     .map((value) => value.trim().toUpperCase())
     .filter(Boolean)
 );
+const HTTP_TIMEOUT_MS = Math.max(5_000, Number(process.env.PIPELINE_HTTP_TIMEOUT_MS ?? "45000"));
+const VERBOSE = String(process.env.PIPELINE_VERBOSE ?? "").toLowerCase() === "true";
 
 type LLMProvider = "gemini" | "minimax";
 
@@ -79,6 +81,27 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function fetchWithTimeout(timeoutMs: number): typeof fetch {
+  return async (input, init) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const nextInit = { ...(init ?? {}) } as RequestInit;
+      if (nextInit.signal) {
+        // If caller already passed a signal, race both.
+        nextInit.signal = (AbortSignal as any).any
+          ? (AbortSignal as any).any([nextInit.signal, controller.signal])
+          : controller.signal;
+      } else {
+        nextInit.signal = controller.signal;
+      }
+      return await fetch(input, nextInit);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 }
 
 function hasEnglishLetters(input: string): boolean {
@@ -282,7 +305,7 @@ function buildPrompt(stockSymbol: string, stockName: string, existing: Array<{ d
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(HTTP_TIMEOUT_MS)(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
     {
       method: "POST",
@@ -318,7 +341,7 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 }
 
 async function callMinimaxOpenAI(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch(`${MINIMAX_OPENAI_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(HTTP_TIMEOUT_MS)(`${MINIMAX_OPENAI_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -350,7 +373,7 @@ async function callMinimaxOpenAI(apiKey: string, prompt: string): Promise<string
 }
 
 async function callMinimaxAnthropicWithBaseUrl(apiKey: string, prompt: string, baseUrl: string): Promise<string> {
-  const response = await fetch(`${baseUrl}/v1/messages`, {
+  const response = await fetchWithTimeout(HTTP_TIMEOUT_MS)(`${baseUrl}/v1/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -478,6 +501,9 @@ async function fetchAllAutoGroups(supabase: any): Promise<EventGroupRow[]> {
   let from = 0;
 
   while (true) {
+    if (VERBOSE) {
+      console.log(`Query auto groups: range=${from}..${from + PAGE_SIZE - 1}`);
+    }
     const { data, error } = await supabase
       .from("event_groups")
       .select("id, stock_symbol, stock_name, events(id, description, event_date, actual_performance, days_after_event, source_url)")
@@ -653,7 +679,14 @@ async function main() {
       persistSession: false,
       autoRefreshToken: false,
     },
+    global: {
+      fetch: fetchWithTimeout(HTTP_TIMEOUT_MS),
+    },
   });
+
+  console.log(
+    `Remediation start. provider=${llmConfig.provider} timeout_ms=${HTTP_TIMEOUT_MS} delay_ms=${GEMINI_DELAY_MS} max_groups=${MAX_GROUPS} symbols=${TARGET_SYMBOLS.size > 0 ? Array.from(TARGET_SYMBOLS).join(",") : "ALL"}`
+  );
 
   const groups = await fetchAllAutoGroups(supabase);
   const targets: EventGroupRow[] = [];
@@ -682,9 +715,14 @@ async function main() {
   let updatedGroups = 0;
   let insertedEvents = 0;
   let failedGroups = 0;
+  let processed = 0;
 
   for (const group of targets) {
     try {
+      processed += 1;
+      if (VERBOSE || processed === 1 || processed % 5 === 0 || processed === targets.length) {
+        console.log(`[${processed}/${targets.length}] Remediate ${group.stock_symbol} (${group.stock_name})`);
+      }
       const result = await remediateGroup(supabase, llmConfig, group);
       if (result.updated) {
         updatedGroups += 1;
