@@ -80,7 +80,7 @@ export function AISettingsPanel({ isOpen, onClose }: AISettingsPanelProps) {
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI 设置</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  优先级: Gemini 免费 -&gt; 用户 Key -&gt; 静态兜底
+                  默认: Gemini 免费 -&gt; (Gemini 429 时 MiniMax) -&gt; 静态兜底；选择自带 Key: 用户 Key -&gt; Gemini 免费 -&gt; (Gemini 429 时 MiniMax) -&gt; 静态兜底
                 </p>
               </div>
               <button
