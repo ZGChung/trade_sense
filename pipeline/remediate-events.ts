@@ -25,6 +25,12 @@ const MIN_EVENTS_PER_STOCK = 3;
 const PAGE_SIZE = 200;
 const GEMINI_MODEL = process.env.PIPELINE_GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
 const GEMINI_DELAY_MS = Math.max(0, Number(process.env.PIPELINE_GEMINI_DELAY_MS ?? "4200"));
+const MINIMAX_MODEL = process.env.PIPELINE_MINIMAX_MODEL?.trim() || process.env.MINIMAX_MODEL?.trim() || "MiniMax-M2.5";
+const MINIMAX_BASE_URL =
+  (process.env.PIPELINE_MINIMAX_BASE_URL?.trim() || process.env.MINIMAX_BASE_URL?.trim() || "https://api.minimax.io/v1").replace(
+    /\/+$/,
+    ""
+  );
 const MAX_GROUPS = Math.max(1, Number(process.env.PIPELINE_REMEDIATE_MAX_GROUPS ?? "10000"));
 const TARGET_SYMBOLS = new Set(
   (process.env.PIPELINE_REMEDIATE_SYMBOLS ?? process.env.PIPELINE_REMEDIATE_SYMBOL ?? "")
@@ -33,12 +39,28 @@ const TARGET_SYMBOLS = new Set(
     .filter(Boolean)
 );
 
+type LLMProvider = "gemini" | "minimax";
+
 function getEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
     throw new Error(`Missing required env: ${name}`);
   }
   return value;
+}
+
+function getLLMConfig(): { provider: LLMProvider; apiKey: string } {
+  const minimaxKey = process.env.MINIMAX_API_KEY?.trim() || "";
+  if (minimaxKey) {
+    return { provider: "minimax", apiKey: minimaxKey };
+  }
+
+  const geminiKey = process.env.GEMINI_API_KEY?.trim() || "";
+  if (geminiKey) {
+    return { provider: "gemini", apiKey: geminiKey };
+  }
+
+  throw new Error("Missing required env: MINIMAX_API_KEY or GEMINI_API_KEY");
 }
 
 function sleep(ms: number): Promise<void> {
@@ -283,6 +305,53 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
   return text;
 }
 
+async function callMinimax(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(`${MINIMAX_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MINIMAX_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      max_tokens: 700,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`MINIMAX_HTTP_${response.status}:${errorText}`);
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    throw new Error("MINIMAX_EMPTY_RESPONSE");
+  }
+
+  return text;
+}
+
+async function callLLM(config: { provider: LLMProvider; apiKey: string }, prompt: string): Promise<string> {
+  if (config.provider === "minimax") {
+    return callMinimax(config.apiKey, prompt);
+  }
+  return callGemini(config.apiKey, prompt);
+}
+
+function isRateLimitMessage(message: string): boolean {
+  return message.startsWith("GEMINI_HTTP_429") || message.startsWith("MINIMAX_HTTP_429");
+}
+
+function isTransient5xxMessage(message: string): boolean {
+  return message.startsWith("GEMINI_HTTP_5") || message.startsWith("MINIMAX_HTTP_5");
+}
+
 function parseGeminiEvents(rawText: string, targetCount: number, baseDate: string, stockSymbol: string): GeminiEvent[] {
   const jsonText = extractJsonObject(rawText) ?? rawText;
   const parsed = JSON.parse(jsonText) as { events?: Array<{ date?: string; description_zh?: string }> };
@@ -354,7 +423,7 @@ async function fetchAllAutoGroups(supabase: any): Promise<EventGroupRow[]> {
 
 async function remediateGroup(
   supabase: any,
-  geminiApiKey: string,
+  llmConfig: { provider: LLMProvider; apiKey: string },
   group: EventGroupRow
 ): Promise<{ updated: boolean; inserted: number }> {
   const events = [...(group.events ?? [])].sort(
@@ -387,7 +456,7 @@ async function remediateGroup(
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
       const prompt = buildPrompt(group.stock_symbol, group.stock_name, seed, targetCount);
-      const output = await callGemini(geminiApiKey, prompt);
+      const output = await callLLM(llmConfig, prompt);
       enriched = ensureUniqueGeminiEvents(
         parseGeminiEvents(
           output,
@@ -403,10 +472,10 @@ async function remediateGroup(
       lastError = error instanceof Error ? error : new Error(String(error));
       const message = lastError.message;
 
-      if (message.startsWith("GEMINI_HTTP_429")) {
+      if (isRateLimitMessage(message)) {
         hitRateLimit = true;
         break;
-      } else if (message.startsWith("GEMINI_HTTP_5")) {
+      } else if (isTransient5xxMessage(message)) {
         await sleep(2500 * attempt);
       } else if (attempt < 5) {
         await sleep(1000 * attempt);
@@ -415,14 +484,14 @@ async function remediateGroup(
   }
 
   if (enriched.length < targetCount) {
-    if (hitRateLimit || lastError?.message?.startsWith("GEMINI_HTTP_429")) {
+    if (hitRateLimit || (lastError?.message && isRateLimitMessage(lastError.message))) {
       console.warn(
-        `Gemini 429 for ${group.stock_symbol}, applying rule-based Chinese fallback.`
+        `${llmConfig.provider} 429 for ${group.stock_symbol}, applying rule-based Chinese fallback.`
       );
       enriched = buildFallbackEvents(group.stock_name, seed, targetCount);
     } else {
       throw new Error(
-        `Gemini remediation failed for ${group.stock_symbol}: ${lastError?.message ?? "unknown"}`
+        `LLM remediation failed for ${group.stock_symbol}: ${lastError?.message ?? "unknown"}`
       );
     }
   }
@@ -493,7 +562,7 @@ async function remediateGroup(
 async function main() {
   const supabaseUrl = getEnv("SUPABASE_URL");
   const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const geminiApiKey = getEnv("GEMINI_API_KEY");
+  const llmConfig = getLLMConfig();
 
   const supabase: any = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
@@ -532,7 +601,7 @@ async function main() {
 
   for (const group of targets) {
     try {
-      const result = await remediateGroup(supabase, geminiApiKey, group);
+      const result = await remediateGroup(supabase, llmConfig, group);
       if (result.updated) {
         updatedGroups += 1;
         insertedEvents += result.inserted;

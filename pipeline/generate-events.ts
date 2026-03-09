@@ -35,13 +35,27 @@ interface GeminiEvent {
 const MIN_EVENTS_PER_STOCK = 3;
 const GEMINI_MODEL = process.env.PIPELINE_GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
 const GEMINI_DELAY_MS = Math.max(0, Number(process.env.PIPELINE_GEMINI_DELAY_MS ?? "4200"));
+const MINIMAX_MODEL = process.env.PIPELINE_MINIMAX_MODEL?.trim() || process.env.MINIMAX_MODEL?.trim() || "MiniMax-M2.5";
+const MINIMAX_BASE_URL =
+  (process.env.PIPELINE_MINIMAX_BASE_URL?.trim() || process.env.MINIMAX_BASE_URL?.trim() || "https://api.minimax.io/v1").replace(
+    /\/+$/,
+    ""
+  );
 
-function getGeminiApiKey(): string {
-  const key = process.env.GEMINI_API_KEY?.trim() || process.env.VITE_GEMINI_API_KEY?.trim() || "";
-  if (!key) {
-    throw new Error("Missing required env: GEMINI_API_KEY");
+type LLMProvider = "gemini" | "minimax";
+
+function getLLMConfig(): { provider: LLMProvider; apiKey: string } {
+  const minimaxKey = process.env.MINIMAX_API_KEY?.trim() || "";
+  if (minimaxKey) {
+    return { provider: "minimax", apiKey: minimaxKey };
   }
-  return key;
+
+  const geminiKey = process.env.GEMINI_API_KEY?.trim() || process.env.VITE_GEMINI_API_KEY?.trim() || "";
+  if (geminiKey) {
+    return { provider: "gemini", apiKey: geminiKey };
+  }
+
+  throw new Error("Missing required env: MINIMAX_API_KEY or GEMINI_API_KEY");
 }
 
 function sleep(ms: number): Promise<void> {
@@ -202,6 +216,45 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
   return text;
 }
 
+async function callMinimax(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(`${MINIMAX_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MINIMAX_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      max_tokens: 500,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`MINIMAX_HTTP_${response.status}:${errorText}`);
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    throw new Error("MINIMAX_EMPTY_RESPONSE");
+  }
+
+  return text;
+}
+
+async function callLLM(config: { provider: LLMProvider; apiKey: string }, prompt: string): Promise<string> {
+  if (config.provider === "minimax") {
+    return callMinimax(config.apiKey, prompt);
+  }
+  return callGemini(config.apiKey, prompt);
+}
+
 function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[], symbol: string): GeminiEvent[] {
   if (!raw || typeof raw !== "object") {
     return [];
@@ -251,7 +304,7 @@ function normalizeGeminiEvents(raw: unknown, seedEvents: SeedEvent[], symbol: st
 }
 
 async function enrichEventsWithGemini(
-  apiKey: string,
+  config: { provider: LLMProvider; apiKey: string },
   symbol: string,
   stockName: string,
   seedEvents: SeedEvent[]
@@ -261,7 +314,7 @@ async function enrichEventsWithGemini(
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       const prompt = buildPrompt(symbol, stockName, seedEvents);
-      const text = await callGemini(apiKey, prompt);
+      const text = await callLLM(config, prompt);
       const jsonText = extractJsonObject(text) ?? text;
       const parsed = JSON.parse(jsonText) as unknown;
       const normalized = normalizeGeminiEvents(parsed, seedEvents, symbol);
@@ -275,13 +328,13 @@ async function enrichEventsWithGemini(
       lastError = error instanceof Error ? error : new Error(String(error));
       const message = lastError.message;
 
-      if (message.startsWith("GEMINI_HTTP_429")) {
+      if (message.startsWith("GEMINI_HTTP_429") || message.startsWith("MINIMAX_HTTP_429")) {
         // Respect free-tier RPM limits and retry.
         await sleep(6000 * attempt);
         continue;
       }
 
-      if (message.startsWith("GEMINI_HTTP_5")) {
+      if (message.startsWith("GEMINI_HTTP_5") || message.startsWith("MINIMAX_HTTP_5")) {
         await sleep(1200 * attempt);
         continue;
       }
@@ -299,7 +352,7 @@ async function enrichEventsWithGemini(
 async function buildGeneratedEventGroups(
   news: NormalizedNews[],
   prices: NormalizedPriceMove[],
-  geminiApiKey: string
+  llmConfig: { provider: LLMProvider; apiKey: string }
 ): Promise<GeneratedEventGroup[]> {
   const priceMap = new Map(prices.map((price) => [price.symbol, price]));
 
@@ -344,7 +397,7 @@ async function buildGeneratedEventGroups(
 
     try {
       const enrichedEvents = await enrichEventsWithGemini(
-        geminiApiKey,
+        llmConfig,
         symbol,
         symbolName,
         seedEvents
@@ -441,11 +494,11 @@ async function pushToSupabase(groups: GeneratedEventGroup[]): Promise<void> {
 }
 
 async function main() {
-  const geminiApiKey = getGeminiApiKey();
+  const llmConfig = getLLMConfig();
   const news = await readJson<NormalizedNews[]>("news.json");
   const prices = await readJson<NormalizedPriceMove[]>("prices.json");
 
-  const generated = await buildGeneratedEventGroups(news, prices, geminiApiKey);
+  const generated = await buildGeneratedEventGroups(news, prices, llmConfig);
   await writeJson("generated-events.json", generated);
 
   await pushToSupabase(generated);
