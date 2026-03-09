@@ -37,6 +37,12 @@ const MINIMAX_ANTHROPIC_BASE_URL = (
   process.env.MINIMAX_ANTHROPIC_BASE_URL?.trim() ||
   "https://api.minimax.io/anthropic"
 ).replace(/\/+$/, "");
+const MINIMAX_ANTHROPIC_FALLBACK_BASE_URL = ((): string => {
+  if (MINIMAX_ANTHROPIC_BASE_URL.includes("minimaxi.com")) {
+    return "https://api.minimax.io/anthropic";
+  }
+  return "https://api.minimaxi.com/anthropic";
+})();
 const MAX_GROUPS = Math.max(1, Number(process.env.PIPELINE_REMEDIATE_MAX_GROUPS ?? "10000"));
 const TARGET_SYMBOLS = new Set(
   (process.env.PIPELINE_REMEDIATE_SYMBOLS ?? process.env.PIPELINE_REMEDIATE_SYMBOL ?? "")
@@ -343,8 +349,8 @@ async function callMinimaxOpenAI(apiKey: string, prompt: string): Promise<string
   return text;
 }
 
-async function callMinimaxAnthropic(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch(`${MINIMAX_ANTHROPIC_BASE_URL}/v1/messages`, {
+async function callMinimaxAnthropicWithBaseUrl(apiKey: string, prompt: string, baseUrl: string): Promise<string> {
+  const response = await fetch(`${baseUrl}/v1/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -384,6 +390,18 @@ async function callMinimaxAnthropic(apiKey: string, prompt: string): Promise<str
   }
 
   return text;
+}
+
+async function callMinimaxAnthropic(apiKey: string, prompt: string): Promise<string> {
+  try {
+    return await callMinimaxAnthropicWithBaseUrl(apiKey, prompt, MINIMAX_ANTHROPIC_BASE_URL);
+  } catch (error) {
+    // Common mismatch: China keys require `api.minimaxi.com`, international keys require `api.minimax.io`.
+    if (error instanceof Error && error.message.includes("MINIMAX_HTTP_401")) {
+      return callMinimaxAnthropicWithBaseUrl(apiKey, prompt, MINIMAX_ANTHROPIC_FALLBACK_BASE_URL);
+    }
+    throw error;
+  }
 }
 
 async function callMinimax(apiKey: string, prompt: string): Promise<string> {
