@@ -350,6 +350,7 @@ async function callMinimaxAnthropic(apiKey: string, prompt: string): Promise<str
       "Content-Type": "application/json",
       // Anthropic-compatible auth headers (MiniMax supports this interface, including Coding Plan keys).
       "x-api-key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({

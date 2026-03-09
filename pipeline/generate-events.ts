@@ -260,6 +260,7 @@ async function callMinimaxAnthropic(apiKey: string, prompt: string): Promise<str
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
