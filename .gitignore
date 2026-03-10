@@ -28,3 +28,8 @@ pipeline/.env.local
 
 # Misc logs
 *.log
+
+# Repo root (local-only artifacts)
+/node_modules/
+/package.json
+/package-lock.json

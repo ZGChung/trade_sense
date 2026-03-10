@@ -32,7 +32,7 @@ npm run dev
 ```bash
 cd pipeline
 npm install
-# 配置 STOCKDATA_API_KEY / GEMINI_API_KEY / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+# 配置 STOCKDATA_API_KEY / (MINIMAX_API_KEY 或 GEMINI_API_KEY) / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
 npm run run
 ```
 
@@ -42,6 +42,7 @@ npm run run
 - `npm run fetch:prices`
 - `npm run generate:events`
 - `npm run remediate:events`
+- `npm run audit:events`（审计/清理与股票不相关的 auto 事件；默认 dry-run）
 
 ## 数据库
 
