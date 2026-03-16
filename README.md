@@ -1,54 +1,76 @@
-# TradeSense
+# TradeSense 📈
 
-TradeSense 是一个用于训练交易直觉的 Web 应用：给出历史事件与股票表现，用户预测涨/跌/平后查看结果与 AI 讲解。
+**交易直觉训练游戏** - 用历史事件预测股票走势，训练你的市场直觉！
 
-## 当前代码结构
+## 🎮 游戏定位
 
-- `web/`：前端应用（React + TypeScript + Vite + Tailwind）
-- `pipeline/`：数据管道（StockData 抓取 + Gemini 中文化/补全 + Supabase 写入）
-- `supabase/`：数据库 schema
+TradeSense 是一款**娱乐导向的金融模拟游戏**，不是教学工具：
+- 通过历史真实事件学习市场规律
+- 挑战排行榜，证明你的预测能力
+- 连续答对获得庆祝动画和成就
 
-## 核心能力
+## 三种游戏模式
 
-- 三种模式：练习模式 / 每日挑战 / 挑战模式
-- 排行榜：每日挑战与挑战模式
-- 登录同步：Supabase Auth（邮箱登录）
-- 匿名记录：未登录也会写入练习数据用于题目难度分析
-- AI 解释缓存：同题仅缓存“答对/答错”两种解释，减少 API 调用（默认链路：Gemini -> Gemini 429 时 MiniMax -> 静态兜底）
-- 自动数据修复：`source=auto` 事件会被翻译为中文、去重，并补齐到至少 3 条
+| 模式 | 说明 |
+|------|------|
+| 练习模式 | 无限练习，不计分 |
+| 每日挑战 | 每天 5 题，与全国玩家比分数 |
+| 挑战模式 | 计时挑战，测试真实实力 |
 
-## 本地运行（前端）
+## 功能特点
+
+- 📊 **真实历史事件** - 基于历史新闻与股价数据
+- 🏆 **排行榜系统** - 每日挑战与挑战模式排行榜
+- 🎯 **成就系统** - 解锁各种里程碑成就
+- 📝 **错题本** - 回顾答错的题目
+- 🌙 **暗色模式** - 保护眼睛
+- 📱 **移动端优化** - PWA 支持，可添加到主屏幕
+- 🔊 **音效反馈** - 答对/答错有音效提示
+
+## 项目结构
+
+```
+trade_sense/
+└── web/                 # 前端应用
+    ├── src/
+    │   ├── components/  # React 组件
+    │   ├── hooks/        # 自定义 Hooks
+    │   ├── models/       # 数据模型
+    │   ├── services/     # 服务层
+    │   └── utils/        # 工具函数
+    └── public/           # 静态资源
+```
+
+## 本地运行
 
 ```bash
 cd web
 npm install
 cp .env.example .env
-# 填写 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / VITE_GEMINI_API_KEY（以及可选的 VITE_MINIMAX_API_KEY）
+# 填写必要的环境变量
 npm run dev
 ```
 
-## 数据管道
+## 技术栈
 
-```bash
-cd pipeline
-npm install
-# 配置 STOCKDATA_API_KEY / (MINIMAX_API_KEY 或 GEMINI_API_KEY) / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
-npm run run
-```
+- **前端**: React 19 + TypeScript + Vite
+- **样式**: Tailwind CSS + Framer Motion
+- **状态**: React Hooks (useState, useEffect, useContext)
+- **存储**: localStorage (匿名数据) + 可选 Supabase (用户数据)
+- **部署**: Vercel
 
-常用单独命令：
+## CI/CD
 
-- `npm run fetch:news`
-- `npm run fetch:prices`
-- `npm run generate:events`
-- `npm run remediate:events`
-- `npm run audit:events`（审计/清理与股票不相关的 auto 事件；默认 dry-run）
+- GitHub Actions 自动构建部署
+- ESLint 代码检查
+- Vitest 单元测试
 
-## 数据库
+## 商业化方向
 
-先在 Supabase SQL Editor 执行 `supabase/schema.sql`，再运行前端与数据管道。
+- 💎 **付费道具** - 解锁更多功能
+- 🎨 **皮肤系统** - 个性化主题
+- 👥 **社交功能** - 排行榜、对战模式
 
-## CI / Workflow
+---
 
-- `.github/workflows/ci.yml`：前端 lint + build
-- `.github/workflows/data-pipeline.yml`：定时/手动跑数据抓取与 remediation
+**注意**：本游戏仅供娱乐，不构成投资建议。历史表现不代表未来收益。
