@@ -70,7 +70,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PIPELINE_REMEDIATE_SYMBOLS: ${{ github.event.inputs.remediate_symbols }}
           PIPELINE_REMEDIATE_MAX_GROUPS: ${{ github.event.inputs.remediate_max_groups }}
-          PIPELINE_GEMINI_DELAY_MS: "1000"
+          PIPELINE_GEMINI_DELAY_MS: "0"
         run: npm run remediate:events
 
   keep-alive:
