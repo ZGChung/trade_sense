@@ -6,6 +6,10 @@ on:
     - cron: "0 12 * * *"  # Daily keep-alive: 12:00 UTC
   workflow_dispatch:
     inputs:
+      skip_ingestion:
+        description: "Skip ingestion and only run remediation"
+        required: false
+        default: "false"
       remediate_symbols:
         description: "Optional, comma-separated stock symbols for targeted remediation (e.g. RDNT,TSLA)"
         required: false
@@ -46,6 +50,7 @@ jobs:
           [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || { echo "Missing secret: SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
 
       - name: Run daily quota-harvest ingestion
+        if: inputs.skip_ingestion != 'true'
         working-directory: pipeline
         continue-on-error: true
         env:
