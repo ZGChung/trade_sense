@@ -50,7 +50,7 @@ const TARGET_SYMBOLS = new Set(
     .map((value) => value.trim().toUpperCase())
     .filter(Boolean)
 );
-const HTTP_TIMEOUT_MS = Math.max(5_000, Number(process.env.PIPELINE_HTTP_TIMEOUT_MS ?? "45000"));
+const HTTP_TIMEOUT_MS = Math.max(5_000, Number(process.env.PIPELINE_HTTP_TIMEOUT_MS ?? "15000"));
 const VERBOSE = String(process.env.PIPELINE_VERBOSE ?? "").toLowerCase() === "true";
 
 type LLMProvider = "gemini" | "minimax";
@@ -566,6 +566,7 @@ async function remediateGroup(
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
       const prompt = buildPrompt(group.stock_symbol, group.stock_name, seed, targetCount);
+      console.log(`Calling LLM for ${group.stock_symbol}...`);
       const output = await callLLM(llmConfig, prompt);
       enriched = ensureUniqueGeminiEvents(
         parseGeminiEvents(
