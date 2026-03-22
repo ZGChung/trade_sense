@@ -151,25 +151,25 @@ function pickRuleBasedSummary(stockName: string, englishText: string): string {
   const lower = englishText.toLowerCase();
 
   if (/(earnings|revenue|guidance|eps|quarter|q[1-4])/.test(lower)) {
-    return `${stockName}发布财报与业绩指引，市场重新评估盈利预期`;
+    return `${stockName}发布季度财报，营收利润均超预期引发股价大涨`;
   }
   if (/(acquir|merger|deal|buyout)/.test(lower)) {
-    return `${stockName}传出并购交易相关进展，估值预期出现波动`;
+    return `${stockName}传出重大并购消息，估值重估预期大幅提升`;
   }
   if (/(fda|approval|clinical|trial|drug|phase)/.test(lower)) {
-    return `${stockName}披露产品审批与临床进展，风险偏好明显变化`;
+    return `${stockName}核心产品获FDA批准上市，商业化前景彻底打开`;
   }
   if (/(partnership|collaboration|contract|agreement)/.test(lower)) {
-    return `${stockName}公布合作与合同动态，市场关注后续兑现能力`;
+    return `${stockName}签订重大战略合同，合同金额超市场预期`;
   }
   if (/(layoff|restructur|cost|efficienc)/.test(lower)) {
-    return `${stockName}推进组织与成本优化，盈利弹性预期被上修`;
+    return `${stockName}宣布大规模裁员，市场解读为盈利预警信号`;
   }
   if (/(regulat|investigation|lawsuit|compliance)/.test(lower)) {
-    return `${stockName}面临监管与合规消息扰动，短期情绪趋于谨慎`;
+    return `${stockName}遭监管调查或处罚，股价短期承压明显`;
   }
 
-  return `${stockName}出现重要公司消息，投资者关注其对业绩与估值的影响`;
+  return `${stockName}出现重大公司动态，投资者需重新评估其估值`;
 }
 
 function ensureUniqueGeminiEvents(
@@ -190,11 +190,11 @@ function ensureUniqueGeminiEvents(
   }
 
   const fallbackTemplates = [
-    `${stockName}公布阶段性经营更新，市场重新评估增长持续性`,
-    `${stockName}披露关键业务指标变化，资金调整中短期仓位`,
-    `${stockName}传出战略推进进展，投资者关注后续兑现节奏`,
-    `${stockName}出现经营预期修正信号，估值分歧有所放大`,
-    `${stockName}发布行业相关动态，市场风险偏好出现变化`,
+    `${stockName}发布季度财报，营收和利润均超市场预期`,
+    `${stockName}宣布重大战略合作，合同金额超预期引发关注`,
+    `${stockName}收到FDA新药审批通过，商业化前景大幅提升`,
+    `${stockName}因合规问题被监管机构调查，股价承压`,
+    `${stockName}宣布大规模裁员以削减成本，市场解读为盈利预警`,
   ];
 
   let idx = 0;
@@ -246,11 +246,11 @@ function buildFallbackEvents(
   }));
 
   const extraTemplates = [
-    `${stockName}发布阶段性经营更新，资金对短期基本面进行重新定价`,
-    `${stockName}相关业务预期出现调整，市场分歧推动波动放大`,
-    `${stockName}披露关键运营信号，投资者关注后续兑现节奏`,
-    `${stockName}释放经营改善迹象，市场开始重估未来盈利弹性`,
-    `${stockName}出现战略执行新进展，交易资金关注兑现节奏变化`,
+    `${stockName}发布季度财报，营收超预期但指引下调引发分歧`,
+    `${stockName}宣布回购股票计划，管理层对估值修复充满信心`,
+    `${stockName}核心产品获得监管批准，分析师大幅上调目标价`,
+    `${stockName}因安全风险召回产品，经销商库存积压需消化`,
+    `${stockName}竞争对手发布重磅新品，行业竞争格局面临洗牌`,
   ];
 
   let idx = 0;
@@ -301,7 +301,7 @@ function buildPrompt(stockSymbol: string, stockName: string, existing: Array<{ d
     .map((event, index) => `${index + 1}. ${event.date} | ${event.description}`)
     .join("\n");
 
-  return `你是金融训练题库编辑。请将以下事件处理成中文题目素材。\n\n股票：${stockName} (${stockSymbol})\n现有事件：\n${lines}\n\n要求：\n1) 把现有事件全部翻译为简体中文（保留原本含义）；\n2) 如果数量不足 ${targetCount} 条，补充到 ${targetCount} 条；\n3) 新增事件允许基于该公司业务进行仿写，但必须像真实新闻语句；\n4) 每条事件必须包含股票代码 ${stockSymbol}，建议以“${stockSymbol}：”开头；\n5) 每条事件 14~38 字；\n6) 日期用 YYYY-MM-DD；\n7) 事件描述必须彼此不同，不能是重复句子；\n8) 仅输出 JSON，不要解释，不要 Markdown。\n\n输出格式：\n{\n  "events": [\n    {"date":"YYYY-MM-DD","description_zh":"中文事件描述"}\n  ]\n}\n\n注意：events 必须恰好 ${targetCount} 条且描述不可重复。`;
+  return `你是金融训练题库编辑。请将以下事件处理成中文题目素材。\n\n股票：${stockName} (${stockSymbol})\n现有事件：\n${lines}\n\n⚠️ 重要要求：\n1) 只选择**对股价有明确影响**的事件（财报超预期、重大并购、FDA审批、裁员、监管处罚、产品发布、战略合作等）。\n2) 避免模糊无意义的泛泛而谈（如"公司参加行业会议"、\"感谢信\"等不直接影响股价的新闻）。\n3) 如果现有事件不足 ${targetCount} 条，补充的事件必须基于真实商业逻辑，有明确市场影响。\n4) 每条事件必须能让玩家判断"这个消息出来，股价大概会涨还是跌"。\n\n要求：\n1) 把现有事件翻译为简体中文（保留原本含义）；\n2) 如果数量不足 ${targetCount} 条，补充到 ${targetCount} 条；\n3) 补充事件必须像真实新闻语句，有实质市场影响；\n4) 每条事件必须包含股票代码 ${stockSymbol}，建议以"${stockSymbol}："开头；\n5) 每条事件 14~38 字；\n6) 日期用 YYYY-MM-DD；\n7) 事件描述必须彼此不同，不能是重复句子；\n8) 仅输出 JSON，不要解释，不要 Markdown。\n\n输出格式：\n{\n  "events": [\n    {"date":"YYYY-MM-DD","description_zh":"中文事件描述"}\n  ]\n}\n\n注意：events 必须恰好 ${targetCount} 条且描述不可重复。`;
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {

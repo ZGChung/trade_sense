@@ -189,7 +189,7 @@ function buildPrompt(symbol: string, stockName: string, seedEvents: SeedEvent[])
     .map((event, index) => `${index + 1}. ${event.date} | ${event.titleEn}`)
     .join("\n");
 
-  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n任务：\n1) 先把以上英文事件全部翻译成简体中文。\n2) 如果事件数量不足 ${MIN_EVENTS_PER_STOCK} 条，再补充到 ${MIN_EVENTS_PER_STOCK} 条，补充事件也要是中文、与该股票近期市场关注点相关。\n3) 允许仿写新增事件，但必须像真实新闻事件句式，且不能复述同一句。\n4) 每条事件描述必须包含股票代码 ${symbol}，建议以“${symbol}：”开头。\n5) 除股票代码外禁止输出英文，禁止输出解释，禁止 Markdown。\n6) 每条事件描述控制在 14~38 字。\n7) 日期使用 YYYY-MM-DD。\n8) 所有事件描述必须互不重复。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}，且描述不可重复。`;
+  return `你是金融内容编辑，请把股票事件整理为中文训练样本。\n\n股票：${stockName} (${symbol})\n英文事件：\n${lines}\n\n⚠️ 重要要求：\n1) 只选择对股票价格有**明确影响**的事件（如：财报超预期、重大并购、FDA审批、裁员、监管处罚等）。\n2) 避免选择模糊的、泛泛的、或者不直接影响股价的新闻（如：公司发"感谢信"、参加"行业会议"等无实质影响的事件）。\n3) 如果原始事件不足以产生 ${MIN_EVENTS_PER_STOCK} 条有实质影响的事件，可以基于该公司的真实业务动态**仿写**有明确影响的事件。\n4) 每条事件必须能让玩家判断"这个消息出来，股价大概会涨还是跌"。\n\n任务：\n1) 先筛选有明确影响的英文事件并翻译成简体中文。\n2) 如果影响事件不足 ${MIN_EVENTS_PER_STOCK} 条，补充到 ${MIN_EVENTS_PER_STOCK} 条。\n3) 补充的事件必须基于真实商业逻辑（如：业绩公告、重大合作、监管动态、战略调整等），不能是无意义的泛泛而谈。\n4) 每条事件描述必须包含股票代码 ${symbol}，建议以"${symbol}："开头。\n5) 除股票代码外禁止输出英文，禁止输出解释，禁止 Markdown。\n6) 每条事件描述控制在 14~38 字。\n7) 日期使用 YYYY-MM-DD。\n8) 所有事件描述必须互不重复。\n\n只返回严格 JSON：\n{\n  "events": [\n    {"date": "YYYY-MM-DD", "description_zh": "中文事件描述"}\n  ]\n}\n\n要求返回 events 数组长度恰好为 ${MIN_EVENTS_PER_STOCK}，且描述不可重复。`;
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
