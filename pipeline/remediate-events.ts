@@ -567,7 +567,9 @@ async function remediateGroup(
     try {
       const prompt = buildPrompt(group.stock_symbol, group.stock_name, seed, targetCount);
       console.log(`Calling LLM for ${group.stock_symbol}...`);
+      console.log(`Calling LLM for ${group.stock_symbol}...`);
       const output = await callLLM(llmConfig, prompt);
+      console.log(`LLM returned for ${group.stock_symbol}: ${output.substring(0, 100)}...`);
       enriched = ensureUniqueGeminiEvents(
         parseGeminiEvents(
           output,
