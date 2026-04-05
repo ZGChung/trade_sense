@@ -18,6 +18,7 @@ interface SideMenuProps {
   onShowHistory: () => void;
   onShowWrongAnswers: () => void;
   onShowAISettings: () => void;
+  onShowQuest: () => void;
   onReset: () => void;
 }
 
@@ -161,6 +162,15 @@ function KeyboardIcon() {
   );
 }
 
+function QuestIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 12l2 2 4-4" />
+      <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.12 0 4.07.74 5.62 1.97" />
+    </svg>
+  );
+}
+
 export function SideMenu({
   isOpen,
   onClose,
@@ -178,6 +188,7 @@ export function SideMenu({
   onShowHistory,
   onShowWrongAnswers,
   onShowAISettings,
+  onShowQuest,
   onReset,
 }: SideMenuProps) {
   return (
@@ -288,6 +299,14 @@ export function SideMenu({
                 }}
                 icon={<WrongAnswersIcon />}
                 badge={wrongAnswersCount}
+              />
+              <MenuButton
+                label="每日任务"
+                onClick={() => {
+                  onShowQuest();
+                  onClose();
+                }}
+                icon={<QuestIcon />}
               />
               <MenuButton
                 label="AI 设置"

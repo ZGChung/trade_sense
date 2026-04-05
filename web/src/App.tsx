@@ -24,6 +24,7 @@ import { SideMenu } from "./components/SideMenu";
 import { LeaderboardPanel } from "./components/LeaderboardPanel";
 import { StatsPanel } from "./components/StatsPanel";
 import { KeyboardShortcutsPanel } from "./components/KeyboardShortcutsPanel";
+import { QuestPanel } from "./components/QuestPanel";
 import { useCountdown } from "./hooks/useCountdown";
 import {
   PredictionOption as PredictionOptionValues,
@@ -58,6 +59,7 @@ function App() {
   const [showSideMenu, setShowSideMenu] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showQuest, setShowQuest] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("tradesense_darkmode");
@@ -392,6 +394,11 @@ function App() {
         onClose={() => setShowShortcuts(false)}
       />
 
+      <QuestPanel
+        isOpen={showQuest}
+        onClose={() => setShowQuest(false)}
+      />
+
       <StatsPanel
         isOpen={showStats}
         onClose={() => setShowStats(false)}
@@ -535,6 +542,7 @@ function App() {
           onShowHistory={() => setShowHistory(true)}
           onShowWrongAnswers={() => setShowWrongAnswers(true)}
           onShowAISettings={() => setShowAISettings(true)}
+          onShowQuest={() => setShowQuest(true)}
           onReset={session.resetSession}
         />
 
