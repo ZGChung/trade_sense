@@ -3,6 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
+import { useDailyQuests } from "./hooks/useDailyQuests";
 import { usePracticeHistory } from "./hooks/usePracticeHistory";
 import { useWrongAnswers } from "./hooks/useWrongAnswers";
 import { useAuth } from "./hooks/useAuth";
@@ -113,6 +114,8 @@ function App() {
     auth.user?.id
   );
 
+  const dailyQuests = useDailyQuests();
+
   const practiceHistory = usePracticeHistory();
   const wrongAnswers = useWrongAnswers(auth.user?.id);
 
@@ -163,6 +166,11 @@ function App() {
           accuracy: isCorrect ? 100 : 0,
           maxStreak: session.currentStreak,
         });
+        // Update quest progress for completing a practice round
+        dailyQuests.recordPlay();
+      } else if (session.practiceMode === "daily") {
+        // Update quest for completing daily challenge
+        dailyQuests.completeDailyChallenge();
       }
     }
     setPrevShowResult(session.showResult);
@@ -186,6 +194,9 @@ function App() {
           stockSymbol: session.currentEventGroup.stockSymbol,
           stockName: session.currentEventGroup.stockName,
         });
+      } else {
+        // Update quest for correct answer (track streak)
+        dailyQuests.recordCorrectAnswer(session.currentStreak);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
