@@ -270,22 +270,31 @@ function App() {
 
   if (session.isLoadingEvents && !finalEvent) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <p className="text-gray-500 dark:text-gray-400">正在加载题目数据...</p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "var(--bg-primary, #f9fafb)", color: "#666", fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ fontSize: "48px", marginBottom: "16px" }}>📈</div>
+        <div style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>TradeSense</div>
+        <div style={{ color: "#999", marginBottom: "16px" }}>正在加载题目数据...</div>
+        <div style={{ width: "40px", height: "40px", border: "3px solid #e5e7eb", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   if (!finalEvent || session.currentEventGroup.events.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400">Error: No events available</p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", backgroundColor: "var(--bg-primary, #f9fafb)", fontFamily: "system-ui, sans-serif", padding: "20px" }}>
+        <div style={{ textAlign: "center", maxWidth: "400px" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📈</div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>TradeSense</div>
+          <p style={{ color: "#dc2626", marginBottom: "8px" }}>Error: No events available</p>
+          {session.eventLoadError && (
+            <p style={{ color: "#666", fontSize: "14px", marginBottom: "16px" }}>{session.eventLoadError}</p>
+          )}
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white"
+            style={{ padding: "12px 24px", backgroundColor: "#3b82f6", color: "white", border: "none", borderRadius: "8px", fontSize: "16px", cursor: "pointer" }}
           >
-            刷新重试
+            刷新页面
           </button>
         </div>
       </div>
