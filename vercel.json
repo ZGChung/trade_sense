@@ -4,5 +4,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
-  "rootDirectory": "web"
+  "routes": [
+    { "src": "/(.*)", "dest": "/dist/$1" }
+  ]
 }
