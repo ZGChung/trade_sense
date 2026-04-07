@@ -57,20 +57,17 @@ function getStorageKey(questId: string, date: string): string {
   return `tradesense_quest_${questId}_${date}`;
 }
 
-function getStreakStorageKey(date: string): string {
-  return `tradesense_streak_${date}`;
-}
-
 export function useDailyQuests() {
   const [quests, setQuests] = useState<DailyQuest[]>([]);
-  const [totalReward, setTotalReward] = useState(0);
-
-  // Initialize quests on mount
-  useEffect(() => {
+  const [totalReward, setTotalReward] = useState(() => {
     const today = getTodayKey();
     const savedReward = localStorage.getItem(`tradesense_total_reward_${today}`);
-    const reward = savedReward ? parseInt(savedReward, 10) : 0;
-    setTotalReward(reward);
+    return savedReward ? parseInt(savedReward, 10) : 0;
+  });
+
+  // Initialize quests on mount (setState needed for async initialization)
+  useEffect(() => {
+    const today = getTodayKey();
 
     const initializedQuests = QUEST_DEFINITIONS.map((def) => {
       const storageKey = getStorageKey(def.id, today);
@@ -94,8 +91,8 @@ export function useDailyQuests() {
       };
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuests(initializedQuests);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update localStorage when quests change
