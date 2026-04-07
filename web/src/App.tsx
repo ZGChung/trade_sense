@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Analytics } from "@vercel/analytics/react";
 import { useTradingSession } from "./hooks/useTradingSession";
 import { useAchievements } from "./hooks/useAchievements";
 import { useDailyQuests } from "./hooks/useDailyQuests";
@@ -590,7 +589,6 @@ function App() {
         />
 
         <Footer />
-        <Analytics />
       </div>
     </div>
   );
