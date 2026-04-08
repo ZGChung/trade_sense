@@ -21,7 +21,8 @@ on:
 
 jobs:
   quota-harvest-pipeline:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '10 0 * * *'
+    # For scheduled runs (twice daily), set remediate_max_groups to process more groups
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '10 0 * *' || github.event.schedule == '0 12 * * *'
     runs-on: ubuntu-latest
 
     steps:
@@ -68,13 +69,14 @@ jobs:
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          PIPELINE_REMEDIATE_SYMBOLS: ${{ github.event.inputs.remediate_symbols }}
-          PIPELINE_REMEDIATE_MAX_GROUPS: ${{ github.event.inputs.remediate_max_groups }}
+          PIPELINE_REMEDIATE_SYMBOLS: ${{ github.event.inputs.remediate_symbols || '' }}
+          PIPELINE_REMEDIATE_MAX_GROUPS: ${{ github.event.inputs.remediate_max_groups || '10000' }}
           PIPELINE_GEMINI_DELAY_MS: "0"
         run: npm run remediate:events
 
   keep-alive:
-    if: github.event_name == 'schedule' && github.event.schedule == '0 12 * * *'
+    # For scheduled keep-alive runs, also apply to both schedule times
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '10 0 * *' || github.event.schedule == '0 12 * * *'
     runs-on: ubuntu-latest
 
     steps:
