@@ -98,3 +98,39 @@ jobs:
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             "${SUPABASE_URL}/rest/v1/event_groups?select=id&limit=1" >/dev/null
           echo "Keep-alive query completed."
+
+  ai-cache-setup:
+    # One-time setup + precomputation for the cross-user AI explanation cache
+    # Trigger manually via workflow_dispatch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pipeline dependencies
+        working-directory: pipeline
+        run: npm install
+
+      - name: Create AI explanation cache table
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx setup-ai-cache.ts
+
+      - name: Precompute AI explanations
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          PIPELINE_MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
+          PIPELINE_VERBOSE: "false"
+        run: npx tsx precompute-ai-cache.ts
