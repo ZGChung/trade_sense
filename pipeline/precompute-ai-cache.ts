@@ -222,30 +222,37 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
-  // Step 2: Fetch events for each group and filter those with >= 3 events
+  // Step 2: Fetch ALL events in ONE query, then group in memory
   // ---------------------------------------------------------------------------
-  console.log("Fetching events for each group...");
+  console.log("Fetching all events in one query...");
+
+  const { data: allEvents, error: allEventsError } = await supabase
+    .from("events")
+    .select("id, description, event_date, actual_performance, event_group_id")
+    .in("event_group_id", (groups as EventGroupRow[]).map((g) => g.id))
+    .order("event_date", { ascending: true });
+
+  if (allEventsError) {
+    console.error(`❌ Failed to fetch events: ${allEventsError.message}`);
+    process.exit(1);
+  }
+
+  // Group events by event_group_id in memory
+  const eventsByGroup = new Map<string, EventRow[]>();
+  for (const event of (allEvents as EventRow[])) {
+    if (!eventsByGroup.has(event.event_group_id)) {
+      eventsByGroup.set(event.event_group_id, []);
+    }
+    eventsByGroup.get(event.event_group_id)!.push(event);
+  }
 
   type GroupWithEvents = EventGroupRow & { events: EventRow[] };
   const groupsWithEvents: GroupWithEvents[] = [];
 
   for (const group of groups as EventGroupRow[]) {
-    const { data: events, error: eventsError } = await supabase
-      .from("events")
-      .select("id, description, event_date, actual_performance, event_group_id")
-      .eq("event_group_id", group.id)
-      .order("event_date", { ascending: true });
-
-    if (eventsError) {
-      console.error(`❌ Failed to fetch events for ${group.stock_symbol}: ${eventsError.message}`);
-      continue;
-    }
-
-    if (events && events.length >= 3) {
-      groupsWithEvents.push({
-        ...group,
-        events: events as EventRow[],
-      });
+    const events = eventsByGroup.get(group.id) ?? [];
+    if (events.length >= 3) {
+      groupsWithEvents.push({ ...group, events });
     }
   }
 
@@ -253,7 +260,7 @@ async function main() {
   console.log(`   Found ${filtered.length} event groups with >= 3 events.\n`);
 
   // ---------------------------------------------------------------------------
-  // Step 2: Build work items
+  // Step 3: Build work items
   // ---------------------------------------------------------------------------
   type WorkItem = {
     group: EventGroupRow;
@@ -313,7 +320,7 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
-  // Step 3: Process work items in batches
+  // Step 4: Process work items in batches
   // ---------------------------------------------------------------------------
   if (!minimaxKey && !pipelineMinimaxKey) {
     console.error("❌ MINIMAX_API_KEY (or PIPELINE_MINIMAX_API_KEY) is required for precomputation.");
