@@ -40,18 +40,18 @@ const VERBOSE = String(process.env.PIPELINE_VERBOSE ?? "").toLowerCase() === "tr
 // Types
 // ---------------------------------------------------------------------------
 
+interface EventGroupRow {
+  id: string;
+  stock_symbol: string;
+  stock_name: string;
+}
+
 interface EventRow {
   id: string;
   description: string;
   event_date: string;
   actual_performance: number | string;
-}
-
-interface EventGroupRow {
-  id: string;
-  stock_symbol: string;
-  stock_name: string;
-  events: EventRow[] | null;
+  event_group_id: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,26 +207,49 @@ async function main() {
   if (DRY_RUN) console.log("🔎 DRY RUN — no API calls will be made, no rows written.\n");
 
   // ---------------------------------------------------------------------------
-  // Step 1: Fetch all event groups with auto source and >= 3 events
+  // Step 1: Fetch all event groups with auto source
   // ---------------------------------------------------------------------------
-  console.log("Fetching event groups with >= 3 events...");
+  console.log("Fetching event groups with auto source...");
 
   const { data: groups, error: groupsError } = await supabase
     .from("event_groups")
-    .select("id, stock_symbol, stock_name, events")
-    .eq("source", "auto")
-    .not("events", "is", null)
-    .not("events", "eq", "[]");
+    .select("id, stock_symbol, stock_name")
+    .eq("source", "auto");
 
   if (groupsError) {
     console.error(`❌ Failed to fetch event groups: ${groupsError.message}`);
     process.exit(1);
   }
 
-  const filtered = (groups as EventGroupRow[] | null ?? []).filter(
-    (g) => Array.isArray(g.events) && g.events.length >= 3
-  );
+  // ---------------------------------------------------------------------------
+  // Step 2: Fetch events for each group and filter those with >= 3 events
+  // ---------------------------------------------------------------------------
+  console.log("Fetching events for each group...");
 
+  type GroupWithEvents = EventGroupRow & { events: EventRow[] };
+  const groupsWithEvents: GroupWithEvents[] = [];
+
+  for (const group of groups as EventGroupRow[]) {
+    const { data: events, error: eventsError } = await supabase
+      .from("events")
+      .select("id, description, event_date, actual_performance, event_group_id")
+      .eq("event_group_id", group.id)
+      .order("event_date", { ascending: true });
+
+    if (eventsError) {
+      console.error(`❌ Failed to fetch events for ${group.stock_symbol}: ${eventsError.message}`);
+      continue;
+    }
+
+    if (events && events.length >= 3) {
+      groupsWithEvents.push({
+        ...group,
+        events: events as EventRow[],
+      });
+    }
+  }
+
+  const filtered = groupsWithEvents;
   console.log(`   Found ${filtered.length} event groups with >= 3 events.\n`);
 
   // ---------------------------------------------------------------------------
