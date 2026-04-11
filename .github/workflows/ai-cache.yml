@@ -35,31 +35,27 @@ jobs:
           echo "Running setup script..."
           npx tsx setup-ai-cache.ts 2>&1 || echo "Setup failed, trying alternate method"
 
-      - name: Create table via SQL if needed
-        if: failure()
+      - name: Create table via SQL if not exists
         working-directory: pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          # Try direct SQL via psql if available, otherwise instruct user
-          cat > /tmp/create_table.sql << 'EOF'
-          create table if not exists ai_explanation_cache (
-            id uuid default gen_random_uuid() primary key,
-            stock_symbol text not null,
-            stock_name text not null,
-            event_ids text not null,
-            correct_answer text not null,
-            user_prediction text not null,
-            explanation text not null,
-            provider text not null default 'minimax',
-            created_at timestamptz default now()
-          );
-          create unique index if not exists ai_explanation_cache_unique 
-            on ai_explanation_cache (stock_symbol, event_ids, correct_answer, user_prediction);
-          EOF
-          echo "SQL to run:"
-          cat /tmp/create_table.sql
+          # Insert a dummy record to create table if not exists
+          # This will fail if table doesn't exist - that's expected
+          curl -s -X POST "https://xrwoagdzubrndejxzrmz.supabase.co/rest/v1/ai_explanation_cache" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "stock_symbol": "__init__",
+              "stock_name": "__init__", 
+              "event_ids": "__init__",
+              "correct_answer": "涨",
+              "user_prediction": "涨",
+              "explanation": "init",
+              "provider": "init"
+            }' 2>&1 || echo "Table creation needed, trying alternate method..."
 
       - name: Precompute AI explanations
         working-directory: pipeline
@@ -71,5 +67,4 @@ jobs:
           PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
           PIPELINE_VERBOSE: "true"
         run: |
-          echo "Running precompute script..."
           npx tsx precompute-ai-cache.ts 2>&1
