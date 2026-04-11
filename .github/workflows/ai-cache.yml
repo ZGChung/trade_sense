@@ -1,0 +1,75 @@
+name: AI Cache Setup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-and-precompute:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pipeline dependencies
+        working-directory: pipeline
+        run: npm install
+
+      - name: Debug env vars
+        run: |
+          echo "SUPABASE_URL set: ${#SUPABASE_URL}"
+          echo "SUPABASE_SERVICE_ROLE_KEY set: ${#SUPABASE_SERVICE_ROLE_KEY}"
+          echo "MINIMAX_API_KEY set: ${#MINIMAX_API_KEY}"
+
+      - name: Create AI explanation cache table
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Running setup script..."
+          npx tsx setup-ai-cache.ts 2>&1 || echo "Setup failed, trying alternate method"
+
+      - name: Create table via SQL if needed
+        if: failure()
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # Try direct SQL via psql if available, otherwise instruct user
+          cat > /tmp/create_table.sql << 'EOF'
+          create table if not exists ai_explanation_cache (
+            id uuid default gen_random_uuid() primary key,
+            stock_symbol text not null,
+            stock_name text not null,
+            event_ids text not null,
+            correct_answer text not null,
+            user_prediction text not null,
+            explanation text not null,
+            provider text not null default 'minimax',
+            created_at timestamptz default now()
+          );
+          create unique index if not exists ai_explanation_cache_unique 
+            on ai_explanation_cache (stock_symbol, event_ids, correct_answer, user_prediction);
+          EOF
+          echo "SQL to run:"
+          cat /tmp/create_table.sql
+
+      - name: Precompute AI explanations
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          PIPELINE_MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
+          PIPELINE_VERBOSE: "true"
+        run: |
+          echo "Running precompute script..."
+          npx tsx precompute-ai-cache.ts 2>&1
