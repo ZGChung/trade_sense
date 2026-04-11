@@ -10,6 +10,8 @@
     "remediate:events": "tsx remediate-events.ts",
     "audit:events": "tsx audit-events.ts",
     "seed": "tsx seed.ts",
+    "setup:ai-cache": "tsx setup-ai-cache.ts",
+    "precompute:ai-cache": "tsx precompute-ai-cache.ts",
     "run": "npm run fetch:news && npm run fetch:prices && npm run generate:events && npm run remediate:events"
   },
   "dependencies": {

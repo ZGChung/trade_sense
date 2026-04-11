@@ -39,6 +39,7 @@ export function ResultView({
     try {
       const explanation = await aiService.explainPredictionResult(
         eventGroup.events,
+        eventGroup.stockSymbol,
         eventGroup.stockName,
         getPerformanceCategory(event.actualPerformance),
         userPrediction,

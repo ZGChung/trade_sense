@@ -24,150 +24,116 @@ const events: HistoricalEvent[] = [
   },
 ];
 
-function setUserProviderSettings() {
-  localStorage.setItem(
-    "tradesense_ai_settings_v1",
-    JSON.stringify({
-      mode: "user-key",
-      userProvider: "deepseek",
-      userApiKey: "fake-key",
-      userModel: "deepseek-chat",
-      userBaseUrl: "https://api.deepseek.com/chat/completions",
-    })
-  );
-}
-
-describe("aiService cache", () => {
+describe("aiService", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
   });
 
-  it("reuses cached API explanation for same question + same scenario", async () => {
-    setUserProviderSettings();
+  it("calls /api/ai-explain and returns result", async () => {
     const aiService = createAIService({});
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        choices: [{ message: { content: "这是一次测试解释" } }],
-      }),
+      json: async () => ({ text: "这是一次测试解释", source: "minimax", cached: false }),
     });
 
     vi.stubGlobal("fetch", fetchMock);
 
-    const first = await aiService.explainPredictionResult(
+    const result = await aiService.explainPredictionResult(
       events,
-      "Apple",
+      "AAPL",
+      "Apple Inc.",
       PredictionOption.RISE,
       PredictionOption.RISE,
       0.034
     );
 
-    const second = await aiService.explainPredictionResult(
-      events,
-      "Apple",
-      PredictionOption.RISE,
-      PredictionOption.RISE,
-      0.034
-    );
-
-    expect(first.text).toBe("这是一次测试解释");
-    expect(second.text).toBe("这是一次测试解释");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps only two cache scenarios per question (correct/wrong)", async () => {
-    setUserProviderSettings();
-    const aiService = createAIService({});
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: "缓存命中测试" } }],
-      }),
-    });
-
-    vi.stubGlobal("fetch", fetchMock);
-
-    // wrong scenario
-    await aiService.explainPredictionResult(
-      events,
-      "Apple",
-      PredictionOption.RISE,
-      PredictionOption.FALL,
-      0.034
-    );
-
-    // another wrong scenario (different wrong option), should hit same cache key
-    await aiService.explainPredictionResult(
-      events,
-      "Apple",
-      PredictionOption.RISE,
-      PredictionOption.FLAT,
-      0.034
-    );
-
-    // correct scenario, should trigger one more API call
-    await aiService.explainPredictionResult(
-      events,
-      "Apple",
-      PredictionOption.RISE,
-      PredictionOption.RISE,
-      0.034
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("aiService fallback", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    vi.restoreAllMocks();
-  });
-
-  it("falls back to MiniMax proxy when Gemini is rate-limited", async () => {
-    const service = createAIService({
-      VITE_GEMINI_API_KEY: "fake-gemini",
-      VITE_MINIMAX_API_KEY: "",
-      VITE_MINIMAX_MODEL: "MiniMax-M2.5",
-      VITE_MINIMAX_BASE_URL: "https://api.minimax.io/v1",
-    });
-
-    const fetchMock = vi.fn().mockImplementation(async (input: Parameters<typeof fetch>[0]) => {
-      const url = String(input);
-      if (url.includes("generativelanguage.googleapis.com")) {
-        return {
-          ok: false,
-          status: 429,
-          text: async () => "rate limited",
-        };
-      }
-
-      if (url === "/api/minimax-explain") {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ text: "MiniMax 兜底解释" }),
-        };
-      }
-
-      throw new Error(`Unexpected fetch url: ${url}`);
-    });
-
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await service.explainPredictionResult(
-      events,
-      "Apple",
-      PredictionOption.RISE,
-      PredictionOption.FALL,
-      0.034
-    );
-
+    expect(result.text).toBe("这是一次测试解释");
     expect(result.source).toBe("minimax-fallback");
-    expect(result.text).toBe("MiniMax 兜底解释");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/ai-explain");
+    const body = JSON.parse(init?.body as string);
+    expect(body.stockSymbol).toBe("AAPL");
+    expect(body.stockName).toBe("Apple Inc.");
+    expect(body.correctAnswer).toBe("涨");
+    expect(body.userPrediction).toBe("涨");
+    expect(body.eventIds).toEqual(["event-1", "event-2"]);
+  });
+
+  it("returns cache source when API returns cached=true", async () => {
+    const aiService = createAIService({});
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: "缓存的解释", source: "cache", cached: true }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await aiService.explainPredictionResult(
+      events,
+      "AAPL",
+      "Apple Inc.",
+      PredictionOption.RISE,
+      PredictionOption.RISE,
+      0.034
+    );
+
+    expect(result.text).toBe("缓存的解释");
+    expect(result.source).toBe("cache");
+    expect(result.providerLabel).toBe("缓存结果 (跨用户共享)");
+  });
+
+  it("falls back to static template when API fails", async () => {
+    const aiService = createAIService({});
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => "Internal Server Error",
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await aiService.explainPredictionResult(
+      events,
+      "AAPL",
+      "Apple Inc.",
+      PredictionOption.RISE,
+      PredictionOption.FALL,
+      0.034
+    );
+
+    expect(result.source).toBe("static-template");
+    expect(result.providerLabel).toBe("静态模板兜底");
+    expect(result.errorMessage).toContain("API 请求失败");
+  });
+
+  it("passes prompt to /api/ai-explain", async () => {
+    const aiService = createAIService({});
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ text: "解释", source: "minimax", cached: false }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await aiService.explainPredictionResult(
+      events,
+      "AAPL",
+      "Apple Inc.",
+      PredictionOption.RISE,
+      PredictionOption.FALL,
+      0.034
+    );
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(init?.body as string);
+    expect(body.prompt).toContain("Apple Inc.");
+    expect(body.prompt).toContain("涨");
+    expect(body.prompt).toContain("跌");
   });
 });
