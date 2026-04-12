@@ -33,3 +33,4 @@ pipeline/.env.local
 /node_modules/
 /package.json
 /package-lock.json
+.vercel
