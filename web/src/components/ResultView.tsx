@@ -52,7 +52,7 @@ export function ResultView({
     } finally {
       setIsLoadingExplanation(false);
     }
-  }, [eventGroup.events, eventGroup.stockName, event.actualPerformance, userPrediction]);
+  }, [eventGroup.events, eventGroup.stockSymbol, eventGroup.stockName, event.actualPerformance, userPrediction]);
 
   useEffect(() => {
     void loadAIExplanation();
