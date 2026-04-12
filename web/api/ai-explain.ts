@@ -188,7 +188,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const promptFromBody = String(body.prompt ?? "").trim();
   const model = (body.model as string)?.trim() || process.env.MINIMAX_MODEL?.trim() || "MiniMax-M2.5";
   const temperature = clampNumber(body.temperature, 0.6, 0, 2);
-  const maxTokens = clampNumber(body.maxTokens, 240, 32, 512);
+  const maxTokens = clampNumber(body.maxTokens, 240, 32, 800);
 
   // Validate required fields
   if (!stockSymbol || !eventIdsRaw || !correctAnswer || !userPrediction) {

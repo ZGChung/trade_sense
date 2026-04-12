@@ -129,7 +129,7 @@ class AIService {
       .map((event, index) => `事件${index + 1}: ${event.description} (日期: ${event.date})`)
       .join("\n");
 
-    return `你是一位股票交易教练，请直接对用户解释这道题。\n\n股票：${stockName}\n\n相关事件：\n${eventsDescription}\n\n实际表现：${(actualPerformance * 100).toFixed(2)}%\n正确答案：${correctAnswer}\n用户预测：${userPrediction}\n\n要求：\n1. 用中文回答，120字以内\n2. 解释事件如何影响市场预期\n3. 如果用户预测错误，直接指出可改进的思路\n4. 语气直接，使用"你"\n\n请给出一段完整结论。`;
+    return `你是一位股票交易教练，请直接对用户解释这道题。\n\n股票：${stockName}\n\n相关事件：\n${eventsDescription}\n\n实际表现：${(actualPerformance * 100).toFixed(2)}%\n正确答案：${correctAnswer}\n用户预测：${userPrediction}\n\n要求：\n1. 用中文回答，300字以内\n2. 解释事件如何影响市场预期\n3. 如果用户预测错误，直接指出可改进的思路\n4. 语气直接，使用"你"\n\n请给出一段完整结论。`;
   }
 
   private buildStaticFallback(events: HistoricalEvent[], actualPerformance: number): string {
