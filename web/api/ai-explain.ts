@@ -299,8 +299,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       )
       .then(({ error }) => {
         if (error) console.error("[ai-explain] Cache store error:", error);
-      })
-      .catch(() => {});
+      });
   }
 
   res.status(200).json({ text, source, cached: false });
