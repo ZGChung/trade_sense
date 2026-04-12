@@ -57,7 +57,7 @@ jobs:
               "provider": "init"
             }' 2>&1 || echo "Table creation needed, trying alternate method..."
 
-      - name: Precompute AI explanations
+      - name: Precompute AI explanations (clear old cache first)
         working-directory: pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -66,5 +66,15 @@ jobs:
           PIPELINE_MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
           PIPELINE_VERBOSE: "true"
+          PIPELINE_CLEAR_CACHE: "true"
         run: |
+          # Clear old cache entries first
+          echo "Clearing old cache entries..."
+          curl -s -X DELETE \
+            "https://xrwoagdzubrndejxzrmz.supabase.co/rest/v1/ai_explanation_cache" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" 2>&1 || echo "Cache clear done"
+          echo "Starting precomputation..."
           npx tsx precompute-ai-cache.ts 2>&1
