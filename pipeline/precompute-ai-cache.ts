@@ -348,22 +348,6 @@ async function main() {
       batch.map(async (work) => {
         const { group, events, correctAnswer, userPrediction, cacheKey, prompt, actualPerformance } = work;
 
-        // Check if already cached
-        const eventIdsSorted = sortEventIdsDesc(events.map((e) => e.id));
-
-        const { data: existing } = await supabase
-          .from("ai_explanation_cache")
-          .select("id")
-          .eq("stock_symbol", group.stock_symbol)
-          .eq("event_ids", eventIdsSorted)
-          .eq("correct_answer", correctAnswer)
-          .eq("user_prediction", userPrediction)
-          .limit(1);
-
-        if (existing && existing.length > 0) {
-          return { status: "skipped" as const, cacheKey };
-        }
-
         // Call MiniMax with retry + delay
         let explanation = "";
         let attempts = 0;

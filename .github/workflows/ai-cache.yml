@@ -57,7 +57,7 @@ jobs:
               "provider": "init"
             }' 2>&1 || echo "Table creation needed, trying alternate method..."
 
-      - name: Precompute AI explanations (clear old cache first)
+      - name: Clear cache and precompute (with async/await properly)
         working-directory: pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -66,13 +66,15 @@ jobs:
           PIPELINE_MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
           PIPELINE_VERBOSE: "true"
-          PIPELINE_CLEAR_CACHE: "true"
         run: |
-          # Clear old cache entries using Supabase client (service role bypasses RLS)
+          # Clear using node with proper async/await
           node -e "
             const { createClient } = require('@supabase/supabase-js');
             const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-            supabase.from('ai_explanation_cache').delete().then(r => console.log('Cache cleared:', r.error || 'OK')).catch(e => console.error(e));
-          " 2>&1 || echo "Trying alternate method..."
+            (async () => {
+              const { error } = await supabase.from('ai_explanation_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+              console.log('Cache cleared:', error || 'OK');
+            })();
+          " 2>&1
           echo "Starting precomputation..."
           npx tsx precompute-ai-cache.ts 2>&1
