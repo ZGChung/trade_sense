@@ -32,7 +32,7 @@ const MINIMAX_ANTHROPIC_FALLBACK_BASE_URL = MINIMAX_ANTHROPIC_BASE_URL.includes(
   ? "https://api.minimax.io/anthropic"
   : "https://api.minimaxi.com/anthropic";
 const HTTP_TIMEOUT_MS = Math.max(5_000, Number(process.env.PIPELINE_HTTP_TIMEOUT_MS ?? "30000"));
-const BATCH_SIZE = Math.max(1, Number(process.env.PIPELINE_PRECOMPUTE_BATCH_SIZE ?? "10"));
+const BATCH_SIZE = Math.max(1, Number(process.env.PIPELINE_PRECOMPUTE_BATCH_SIZE ?? "50"));
 const DRY_RUN = String(process.env.PIPELINE_PRECOMPUTE_DRY_RUN ?? "").toLowerCase() === "true";
 const VERBOSE = String(process.env.PIPELINE_VERBOSE ?? "").toLowerCase() === "true";
 

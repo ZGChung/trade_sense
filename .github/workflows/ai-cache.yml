@@ -6,6 +6,8 @@ on:
 jobs:
   setup-and-precompute:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Checkout
@@ -41,40 +43,47 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          # Insert a dummy record to create table if not exists
-          # This will fail if table doesn't exist - that's expected
           curl -s -X POST "https://xrwoagdzubrndejxzrmz.supabase.co/rest/v1/ai_explanation_cache" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{
               "stock_symbol": "__init__",
-              "stock_name": "__init__", 
+              "stock_name": "__init__",
               "event_ids": "__init__",
               "correct_answer": "涨",
               "user_prediction": "涨",
               "explanation": "init",
               "provider": "init"
-            }' 2>&1 || echo "Table creation needed, trying alternate method..."
+            }' 2>&1 || echo "Table may already exist"
 
-      - name: Clear cache and precompute (with async/await properly)
+      - name: Clear old cache entries
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node -e "
+            const { createClient } = require('@supabase/supabase-js');
+            const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+            (async () => {
+              const { error } = await supabase.from('ai_explanation_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+              if (error) {
+                console.log('Clear warning:', error.message);
+              } else {
+                console.log('Cache cleared successfully');
+              }
+            })().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
+          " 2>&1
+
+      - name: Precompute AI explanations (batch size 50)
         working-directory: pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           PIPELINE_MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
+          PIPELINE_PRECOMPUTE_BATCH_SIZE: "50"
           PIPELINE_VERBOSE: "true"
         run: |
-          # Clear using node with proper async/await
-          node -e "
-            const { createClient } = require('@supabase/supabase-js');
-            const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-            (async () => {
-              const { error } = await supabase.from('ai_explanation_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-              console.log('Cache cleared:', error || 'OK');
-            })();
-          " 2>&1
-          echo "Starting precomputation..."
           npx tsx precompute-ai-cache.ts 2>&1
