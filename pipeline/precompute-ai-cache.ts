@@ -265,6 +265,7 @@ async function main() {
   type WorkItem = {
     group: EventGroupRow;
     events: EventRow[];
+    eventIdsSorted: string;
     correctAnswer: string;
     userPrediction: string;
     cacheKey: string;
@@ -290,6 +291,7 @@ async function main() {
         workItems.push({
           group,
           events: topEvents,
+          eventIdsSorted,
           correctAnswer,
           userPrediction,
           cacheKey,
@@ -388,7 +390,7 @@ async function main() {
             {
               stock_symbol: group.stock_symbol,
               stock_name: group.stock_name,
-              event_ids: eventIdsSorted,
+              event_ids: work.eventIdsSorted,
               correct_answer: correctAnswer,
               user_prediction: userPrediction,
               explanation,
