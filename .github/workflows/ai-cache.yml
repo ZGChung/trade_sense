@@ -7,9 +7,7 @@ jobs:
   setup-and-precompute:
     runs-on: ubuntu-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       NODE_OPTIONS: "--openssl-legacy-provider"
-      NODE_TLS_REJECT_UNAUTHORIZED: "0"
 
     steps:
       - name: Checkout
@@ -18,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "18"
 
       - name: Install pipeline dependencies
         working-directory: pipeline
