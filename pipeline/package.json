@@ -15,7 +15,8 @@
     "run": "npm run fetch:news && npm run fetch:prices && npm run generate:events && npm run remediate:events"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^1.35.7"
+    "@supabase/supabase-js": "^1.35.7",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "tsx": "^4.20.6",

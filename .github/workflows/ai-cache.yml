@@ -7,8 +7,9 @@ jobs:
   setup-and-precompute:
     runs-on: ubuntu-latest
     env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+      NODE_OPTIONS: "--openssl-legacy-provider --experimental-fetch"
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
-      NODE_OPTIONS: "--openssl-legacy-provider"
 
     steps:
       - name: Checkout
@@ -18,6 +19,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Debug network
+        run: |
+          curl -v "https://xrwoagdzubrndejxzrmz.supabase.co/rest/v1/" 2>&1 | head -30
 
       - name: Install pipeline dependencies
         working-directory: pipeline
