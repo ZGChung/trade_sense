@@ -222,28 +222,40 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
-  // Step 2: Fetch ALL events in ONE query, then group in memory
+  // Step 2: Fetch ALL events in batches, then group in memory
   // ---------------------------------------------------------------------------
-  console.log("Fetching all events in one query...");
+  console.log("Fetching all events in batches...");
 
-  const { data: allEvents, error: allEventsError } = await supabase
-    .from("events")
-    .select("id, description, event_date, actual_performance, event_group_id")
-    .in("event_group_id", (groups as EventGroupRow[]).map((g) => g.id))
-    .order("event_date", { ascending: true });
+  const groupIds = (groups as EventGroupRow[]).map((g) => g.id);
+  const BATCH_FETCH_SIZE = 50;
+  const eventsByGroup = new Map<string, EventRow[]>();
 
-  if (allEventsError) {
-    console.error(`❌ Failed to fetch events: ${allEventsError.message}`);
-    process.exit(1);
+  for (let i = 0; i < groupIds.length; i += BATCH_FETCH_SIZE) {
+    const batchIds = groupIds.slice(i, i + BATCH_FETCH_SIZE);
+    const { data: batchEvents, error: batchError } = await supabase
+      .from("events")
+      .select("id, description, event_date, actual_performance, event_group_id")
+      .in("event_group_id", batchIds)
+      .order("event_date", { ascending: true });
+
+    if (batchError) {
+      console.error(`❌ Failed to fetch events batch ${Math.floor(i / BATCH_FETCH_SIZE) + 1}: ${batchError.message}`);
+      process.exit(1);
+    }
+
+    for (const event of (batchEvents as EventRow[])) {
+      if (!eventsByGroup.has(event.event_group_id)) {
+        eventsByGroup.set(event.event_group_id, []);
+      }
+      eventsByGroup.get(event.event_group_id)!.push(event);
+    }
   }
 
-  // Group events by event_group_id in memory
-  const eventsByGroup = new Map<string, EventRow[]>();
-  for (const event of (allEvents as EventRow[])) {
-    if (!eventsByGroup.has(event.event_group_id)) {
-      eventsByGroup.set(event.event_group_id, []);
-    }
-    eventsByGroup.get(event.event_group_id)!.push(event);
+  console.log(`   Fetched events for ${groupIds.length} groups.\n`);
+
+  const allEvents: EventRow[] = [];
+  for (const events of eventsByGroup.values()) {
+    allEvents.push(...events);
   }
 
   type GroupWithEvents = EventGroupRow & { events: EventRow[] };

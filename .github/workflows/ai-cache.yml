@@ -88,7 +88,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           PIPELINE_MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          PIPELINE_PRECOMPUTE_BATCH_SIZE: "5"
+          PIPELINE_PRECOMPUTE_BATCH_SIZE: "10"
           PIPELINE_VERBOSE: "true"
         run: |
           npx tsx precompute-ai-cache.ts 2>&1
